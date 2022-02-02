@@ -1,0 +1,30 @@
+"CustomEvents"
+{
+    "on_keybind_changed"
+    {
+        "name"    "string"
+        "key"    "string"
+    }
+    "on_panel_changed"
+    {
+        "name"    "string"
+        "state"    "short"
+    }
+    "on_global_value_changed"
+    {
+        "name"    "string"
+    }
+    "on_weapon_moved"
+    {
+    }
+    "on_process_confirm"
+    {
+    }
+    "on_continue_tutorial"
+    {
+    }
+    "on_force_onetime_trigger"
+    {
+        "state"    "short"
+    }
+}

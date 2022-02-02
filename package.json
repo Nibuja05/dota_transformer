@@ -10,6 +10,7 @@
 		"dev": "run-p dev:*",
 		"dev:panorama": "tsc --project src/panorama/tsconfig.json --watch",
 		"dev:vscripts": "tstl --project src/vscripts/tsconfig.json --watch",
+		"pdev": "ttsc --project src/panorama/tsconfig.json --watch",
 		"tdev": "tsc --project node_modules/dota_transformer/tsconfig.json --watch",
 		"vdev": "tstl --project src/vscripts/tsconfig.json",
 		"ddev": "node node_modules/dota_transformer/get_declaration.js"
