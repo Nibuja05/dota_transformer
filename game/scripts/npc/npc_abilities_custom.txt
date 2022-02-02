@@ -1,0 +1,4 @@
+#base "abilities/generatedAbilities.kv"
+"DOTAAbilities"
+{
+}
