@@ -26,6 +26,7 @@
 	"dependencies": {
 		"node_modules-path": "^2.0.5",
 		"prettier": "^2.5.1",
+		"ttypescript": "^1.5.13",
 		"valve-kv": "^1.2.0"
 	}
 }
