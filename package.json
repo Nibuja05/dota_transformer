@@ -10,10 +10,10 @@
 		"dev": "run-p dev:*",
 		"dev:panorama": "tsc --project src/panorama/tsconfig.json --watch",
 		"dev:vscripts": "tstl --project src/vscripts/tsconfig.json --watch",
-		"pdev": "ttsc --project src/panorama/tsconfig.json --watch",
+		"pdev": "ttsc --project src/panorama/tsconfig.json",
 		"tdev": "tsc --project node_modules/dota_transformer/tsconfig.json --watch",
 		"vdev": "tstl --project src/vscripts/tsconfig.json",
-		"ddev": "node node_modules/dota_transformer/get_declaration.js"
+		"ddev": "node node_modules/dota_transformer/checkDeclaration.js"
 	},
 	"devDependencies": {
 		"@moddota/dota-lua-types": "^4.13.0",
@@ -25,6 +25,7 @@
 		"typescript-to-lua": "^1.0.0"
 	},
 	"dependencies": {
+		"dota_transformer_pkg": "file:dota_transformer",
 		"node_modules-path": "^2.0.5",
 		"prettier": "^2.5.1",
 		"ttypescript": "^1.5.13",

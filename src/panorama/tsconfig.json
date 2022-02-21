@@ -5,7 +5,7 @@
 		"target": "es2017",
 		"lib": ["es2017"],
 		"types": ["@moddota/panorama-types", "dota_transformer/panorama"],
-		"plugins": [{ "transform": "dota_transformer/panorama_transform" }],
+		"plugins": [{ "transform": "dota_transformer/panorama_transform" }, { "name": "dota_transformer/test_plugin" }],
 		"moduleResolution": "node",
 		"strict": true
 	},

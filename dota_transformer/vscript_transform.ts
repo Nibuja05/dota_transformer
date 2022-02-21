@@ -38,9 +38,16 @@ const BASE_ABILITY_OBJECT = `
 "DOTAAbilities"
 {
 }`;
+const GENERATED_TYPES_PATH_ABILITIES = path.join(__dirname, "_generated", "abilities.d.ts");
+const BASE_ABILITY_TYPE = `
+declare const enum Abilities {
+	$,
+}`;
 
 const abilityMap: Map<string, Set<string>> = new Map();
 const curAbilities: Map<string, Set<AbilityInformation>> = new Map();
+const curAbilityNames: Set<string> = new Set();
+let curError = false;
 
 /**
  * Get the path to the ability directory inside "scripts/npc"
@@ -401,6 +408,9 @@ function writeAbility(ability: AbilityInformation) {
 	}
 	fileContent[ability.name] = kvAbility;
 	writeGeneratedAbilities(ability.scriptFile, fileContent);
+
+	curAbilityNames.add(ability.name);
+	updateAbilityTypes();
 }
 
 /**
@@ -423,6 +433,9 @@ function removeAbility(absPath: string, abilityName: string, remBase: boolean) {
 	}
 	const abilityStr = serialize({ DOTAAbilities: fileContent });
 	fs.writeFileSync(abilityFilePath, abilityStr);
+
+	curAbilityNames.delete(abilityName);
+	updateAbilityTypes();
 }
 
 /**
@@ -734,6 +747,20 @@ function getAbilityFileCountByFolder(absPath: string) {
 	return count;
 }
 
+function updateAbilityTypes() {
+	// console.log("UPDATE!!");
+	const entries: string[] = [];
+	curAbilityNames.forEach((name) => {
+		entries.push(`${name} = "${name}"`);
+	});
+	const content = BASE_ABILITY_TYPE.replace("$", entries.join(",\n\t"));
+	try {
+		fs.writeFileSync(GENERATED_TYPES_PATH_ABILITIES, content);
+	} catch {
+		// Done
+		console.log(path.resolve(GENERATED_TYPES_PATH_ABILITIES));
+	}
+}
 /**
  * Check if this node should be deleted.
  * @param node node to check
@@ -754,6 +781,7 @@ const createDotaTransformer =
 	(program: ts.Program): ts.TransformerFactory<ts.SourceFile> =>
 	(context) => {
 		const tsConfig = setTsConfig(program);
+		const preEmitDiagnostics = [...program.getOptionsDiagnostics(), ...program.getGlobalDiagnostics()];
 		if (tsConfig) {
 			validateNettables(tsConfig.rootDir, tsConfig.output);
 			// validateCustomGameevents(tsConfig.rootDir, tsConfig.output, program);
@@ -768,7 +796,21 @@ const createDotaTransformer =
 			return ts.visitEachChild(node, visit, context);
 		};
 		return (file) => {
+			if (preEmitDiagnostics.length > 0 || curError) {
+				curError = true;
+				return file;
+			}
+			preEmitDiagnostics.push(...program.getSyntacticDiagnostics(file));
+			preEmitDiagnostics.push(...program.getSemanticDiagnostics(file));
+			preEmitDiagnostics.push(...program.getDeclarationDiagnostics());
+			if (preEmitDiagnostics.length > 0 || curError) {
+				curError = true;
+				return file;
+			}
+			curError = false;
+
 			const fileName = getCleanedFilePath(file);
+
 			let fileAbilities = abilityMap.get(fileName) ?? new Set();
 			curAbilities.set(fileName, new Set());
 

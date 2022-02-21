@@ -1,5 +1,11 @@
 "DOTAAbilities"
 {
+    "other_meepo_ability"
+    {
+        "BaseClass"    "ability_lua"
+        "ScriptFile"    "abilities/heroes/meepo/other_meepo_ability"
+        "AbilityBehavior"    "DOTA_ABILITY_BEHAVIOR_HIDDEN | DOTA_ABILITY_BEHAVIOR_IGNORE_SILENCE"
+    }
     "meepo_earthbind_ts_example"
     {
         "BaseClass"    "ability_lua"
@@ -11,7 +17,6 @@
         "AbilitySound"    "Hero_Meepo.Earthbind.Cast"
         "AbilityCastRange"    "1250"
         "AbilityCastPoint"    "0.3"
-        "AbilityCooldown"    "%cooldown"
         "AbilityManaCost"    "120 130 140 150"
         "AbilityType"    "DOTA_ABILITY_TYPE_BASIC"
         "MyVar"    "5"
@@ -44,11 +49,5 @@
                 "LinkedSpecialBonus"    "special_bonus_unique_meepo3"
             }
         }
-    }
-    "other_meepo_ability"
-    {
-        "BaseClass"    "ability_lua"
-        "ScriptFile"    "abilities/heroes/meepo/other_meepo_ability"
-        "AbilityBehavior"    "DOTA_ABILITY_BEHAVIOR_HIDDEN | DOTA_ABILITY_BEHAVIOR_IGNORE_SILENCE"
     }
 }

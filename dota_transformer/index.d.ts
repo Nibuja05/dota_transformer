@@ -1,3 +1,5 @@
+/// <reference path="_generated/abilities.d.ts" />
+
 interface CDOTA_Ability_Lua {
 	/**
 	 * Special Values for this ability.

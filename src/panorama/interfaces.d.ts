@@ -41,9 +41,6 @@ interface GameEventDeclarations {
 	on_continue_tutorial: {};
 	on_force_onetime_trigger: OnForceOnetimeTriggerEvent;
 }
-// interface GameEventDeclarations {
-// 	test: string;
-// }
 
 interface DragStartEvent {
 	removePositionBeforeDrop: boolean;

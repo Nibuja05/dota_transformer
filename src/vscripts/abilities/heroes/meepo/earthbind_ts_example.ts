@@ -4,6 +4,8 @@ import { BaseAbility, registerAbility } from "../../../lib/dota_ts_adapter";
 export class meepo_earthbind_ts_example extends BaseAbility {
 	particle?: ParticleID;
 
+	test = Abilities.meepo_earthbind_ts_example;
+
 	SkipAbility: boolean = false;
 	SpecialValues: AbilitySpecials = {
 		duration: 2,
@@ -23,7 +25,6 @@ export class meepo_earthbind_ts_example extends BaseAbility {
 		Sound: "Hero_Meepo.Earthbind.Cast",
 		CastRange: 1250,
 		CastPoint: 0.3,
-		Cooldown: "cooldown",
 		ManaCost: [120, 130, 140, 150],
 		Type: AbilityTypes.BASIC,
 	};

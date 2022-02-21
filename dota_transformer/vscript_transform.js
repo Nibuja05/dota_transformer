@@ -39,8 +39,15 @@ const BASE_ABILITY_OBJECT = `
 "DOTAAbilities"
 {
 }`;
+const GENERATED_TYPES_PATH_ABILITIES = path.join(__dirname, "_generated", "abilities.d.ts");
+const BASE_ABILITY_TYPE = `
+declare const enum Abilities {
+	$,
+}`;
 const abilityMap = new Map();
 const curAbilities = new Map();
+const curAbilityNames = new Set();
+let curError = false;
 /**
  * Get the path to the ability directory inside "scripts/npc"
  * @returns ability path
@@ -382,6 +389,8 @@ function writeAbility(ability) {
     }
     fileContent[ability.name] = kvAbility;
     writeGeneratedAbilities(ability.scriptFile, fileContent);
+    curAbilityNames.add(ability.name);
+    updateAbilityTypes();
 }
 /**
  * Remove an ability from the KV ability file.
@@ -404,6 +413,8 @@ function removeAbility(absPath, abilityName, remBase) {
     }
     const abilityStr = valve_kv_1.serialize({ DOTAAbilities: fileContent });
     fs.writeFileSync(abilityFilePath, abilityStr);
+    curAbilityNames.delete(abilityName);
+    updateAbilityTypes();
 }
 /**
  * Get the name and arguments of a decorator node.
@@ -735,6 +746,21 @@ function getAbilityFileCountByFolder(absPath) {
     }
     return count;
 }
+function updateAbilityTypes() {
+    // console.log("UPDATE!!");
+    const entries = [];
+    curAbilityNames.forEach((name) => {
+        entries.push(`${name} = "${name}"`);
+    });
+    const content = BASE_ABILITY_TYPE.replace("$", entries.join(",\n\t"));
+    try {
+        fs.writeFileSync(GENERATED_TYPES_PATH_ABILITIES, content);
+    }
+    catch (_a) {
+        // Done
+        console.log(path.resolve(GENERATED_TYPES_PATH_ABILITIES));
+    }
+}
 /**
  * Check if this node should be deleted.
  * @param node node to check
@@ -753,6 +779,7 @@ const removeNode = (node) => {
  */
 const createDotaTransformer = (program) => (context) => {
     const tsConfig = transform_1.setTsConfig(program);
+    const preEmitDiagnostics = [...program.getOptionsDiagnostics(), ...program.getGlobalDiagnostics()];
     if (tsConfig) {
         checkDeclarations_1.validateNettables(tsConfig.rootDir, tsConfig.output);
         // validateCustomGameevents(tsConfig.rootDir, tsConfig.output, program);
@@ -768,6 +795,18 @@ const createDotaTransformer = (program) => (context) => {
     };
     return (file) => {
         var _a;
+        if (preEmitDiagnostics.length > 0 || curError) {
+            curError = true;
+            return file;
+        }
+        preEmitDiagnostics.push(...program.getSyntacticDiagnostics(file));
+        preEmitDiagnostics.push(...program.getSemanticDiagnostics(file));
+        preEmitDiagnostics.push(...program.getDeclarationDiagnostics());
+        if (preEmitDiagnostics.length > 0 || curError) {
+            curError = true;
+            return file;
+        }
+        curError = false;
         const fileName = getCleanedFilePath(file);
         let fileAbilities = (_a = abilityMap.get(fileName)) !== null && _a !== void 0 ? _a : new Set();
         curAbilities.set(fileName, new Set());

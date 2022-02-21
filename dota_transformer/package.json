@@ -1,0 +1,26 @@
+{
+	"name": "dota_transformer_pkg",
+	"version": "0.0.1",
+	"description": "Adds a tstl transformer to build dota kv abilities from ts syntax.",
+	"main": "",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Nibuja05/dota_ability_transformer.git"
+	},
+	"author": "Nibuja",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/Nibuja05/dota_transformer/issues"
+	},
+	"homepage": "https://github.com/Nibuja05/dota_transformer#readme",
+	"dependencies": {
+		"node_modules-path": "^2.0.5",
+		"valve-kv": "^1.2.0"
+	},
+	"keywords": [
+		"Dota",
+		"Ability",
+		"Generator",
+		"Typescript"
+	]
+}
