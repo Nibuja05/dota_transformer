@@ -4,7 +4,7 @@ import { BaseAbility, registerAbility } from "../../../lib/dota_ts_adapter";
 export class meepo_earthbind_ts_example extends BaseAbility {
 	particle?: ParticleID;
 
-	test = Abilities.meepo_earthbind_ts_example;
+	test = CustomAbilities.meepo_earthbind_ts_example;
 
 	SkipAbility: boolean = false;
 	SpecialValues: AbilitySpecials = {
@@ -27,8 +27,9 @@ export class meepo_earthbind_ts_example extends BaseAbility {
 		CastPoint: 0.3,
 		ManaCost: [120, 130, 140, 150],
 		Type: AbilityTypes.BASIC,
+		IsCastableWhileHidden: true,
 	};
-	CustomProperties: AbilityCustomProperties = {
+	CustomProperties: CustomProperties = {
 		MyVar: 5,
 	};
 
@@ -59,47 +60,50 @@ export class meepo_earthbind_ts_example extends BaseAbility {
 	OnSpellStart() {
 		const caster = this.GetCaster();
 		const point = this.GetCursorPosition();
-		const projectileSpeed = this.GetSpecialValueFor("speed");
 
-		const direction = ((point - caster.GetAbsOrigin()) as Vector).Normalized();
-		direction.z = 0;
-		const distance = ((point - caster.GetAbsOrigin()) as Vector).Length();
+		let unit = CreateUnitByName("my_test_unit", point, true, caster, caster, caster.GetTeam());
+		unit.testFunc();
+		// const projectileSpeed = this.GetSpecialValueFor("speed");
 
-		const radius = this.GetSpecialValueFor("radius");
-		this.particle = ParticleManager.CreateParticle(
-			"particles/units/heroes/hero_meepo/meepo_earthbind_projectile_fx.vpcf",
-			ParticleAttachment.CUSTOMORIGIN,
-			caster
-		);
+		// const direction = ((point - caster.GetAbsOrigin()) as Vector).Normalized();
+		// direction.z = 0;
+		// const distance = ((point - caster.GetAbsOrigin()) as Vector).Length();
 
-		ParticleManager.SetParticleControl(this.particle, 0, caster.GetAbsOrigin());
-		ParticleManager.SetParticleControl(this.particle, 1, point);
-		ParticleManager.SetParticleControl(this.particle, 2, Vector(projectileSpeed, 0, 0));
+		// const radius = this.GetSpecialValueFor("radius");
+		// this.particle = ParticleManager.CreateParticle(
+		// 	"particles/units/heroes/hero_meepo/meepo_earthbind_projectile_fx.vpcf",
+		// 	ParticleAttachment.CUSTOMORIGIN,
+		// 	caster
+		// );
 
-		ProjectileManager.CreateLinearProjectile({
-			Ability: this,
-			EffectName: "",
-			vSpawnOrigin: caster.GetAbsOrigin(),
-			fDistance: distance,
-			fStartRadius: radius,
-			fEndRadius: radius,
-			Source: caster,
-			bHasFrontalCone: false,
-			iUnitTargetTeam: UnitTargetTeam.NONE,
-			iUnitTargetFlags: UnitTargetFlags.NONE,
-			iUnitTargetType: UnitTargetType.NONE,
-			vVelocity: (direction * projectileSpeed) as Vector,
-			bProvidesVision: true,
-			iVisionRadius: radius,
-			iVisionTeamNumber: caster.GetTeamNumber(),
-		});
+		// ParticleManager.SetParticleControl(this.particle, 0, caster.GetAbsOrigin());
+		// ParticleManager.SetParticleControl(this.particle, 1, point);
+		// ParticleManager.SetParticleControl(this.particle, 2, Vector(projectileSpeed, 0, 0));
 
-		CustomGameEventManager.Send_ServerToAllClients("example_event", {
-			myNumber: 5,
-			myArrayOfNumbers: [],
-			myBoolean: true,
-			myString: "Hi",
-		});
+		// ProjectileManager.CreateLinearProjectile({
+		// 	Ability: this,
+		// 	EffectName: "",
+		// 	vSpawnOrigin: caster.GetAbsOrigin(),
+		// 	fDistance: distance,
+		// 	fStartRadius: radius,
+		// 	fEndRadius: radius,
+		// 	Source: caster,
+		// 	bHasFrontalCone: false,
+		// 	iUnitTargetTeam: UnitTargetTeam.NONE,
+		// 	iUnitTargetFlags: UnitTargetFlags.NONE,
+		// 	iUnitTargetType: UnitTargetType.NONE,
+		// 	vVelocity: (direction * projectileSpeed) as Vector,
+		// 	bProvidesVision: true,
+		// 	iVisionRadius: radius,
+		// 	iVisionTeamNumber: caster.GetTeamNumber(),
+		// });
+
+		// CustomGameEventManager.Send_ServerToAllClients("example_event", {
+		// 	myNumber: 5,
+		// 	myArrayOfNumbers: [],
+		// 	myBoolean: true,
+		// 	myString: "Hi",
+		// });
 	}
 
 	OnProjectileHit(_target: CDOTA_BaseNPC, location: Vector) {

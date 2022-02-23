@@ -1,6 +1,6 @@
 import * as ts from "typescript";
-import { validateCustomGameevents } from "dota_transformer/checkDeclarations";
-import { setTsConfig, getConfiguration, configuration } from "dota_transformer/transform";
+import { validateCustomGameevents } from "dota_transformer_pkg/checkDeclarations";
+import { setTsConfig, getConfiguration, configuration } from "dota_transformer_pkg/transform";
 
 let initialized = false;
 /**

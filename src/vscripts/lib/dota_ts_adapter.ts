@@ -26,10 +26,71 @@ export class BaseModifierMotionVertical extends BaseModifier {}
 export interface BaseModifierMotionBoth extends CDOTA_Modifier_Lua_Motion_Both {}
 export class BaseModifierMotionBoth extends BaseModifier {}
 
+export interface BaseUnit extends CDOTA_BaseNPC {
+	/**
+	 * Called when this unit spawns.
+	 */
+	OnSpawn(): void;
+	/**
+	 * Called when this unit dies.
+	 * @param attacker attacking unit
+	 * @param inflictor inflicting ability (if any)
+	 * @param damageBits
+	 */
+	OnDeath(attacker: CDOTA_BaseNPC | undefined, inflictor: CDOTABaseAbility | undefined, damageBits: number): void;
+	/**
+	 * When this unit gets damage
+	 * @param attacker attacking unit
+	 * @param inflictor  inflicting ability (if any)
+	 * @param damage damage
+	 * @param damageBits
+	 */
+	OnHurt(
+		attacker: CDOTA_BaseNPC | undefined,
+		inflictor: CDOTABaseAbility | undefined,
+		damage: number,
+		damageBits: number
+	): void;
+	/**
+	 * When this unit gets removed completly.
+	 * *Happens way after death, when the resources are freed completly*
+	 */
+	OnDestroy(): void;
+	/**
+	 * Precache here
+	 * @param context
+	 */
+	OnPrecache(context: CScriptPrecacheContext): void;
+}
+export class BaseUnit {}
+
+declare global {
+	function CreateUnitByName<K extends keyof CustomUnits, T extends CustomUnits[K]>(
+		this: void,
+		unitName: K,
+		location: Vector,
+		findClearSpace: boolean,
+		npcOwner: CBaseEntity | undefined,
+		entityOwner: CBaseEntity | undefined,
+		team: DotaTeam
+	): T;
+	function CreateUnitByNameAsync<K extends keyof CustomUnits, T extends CustomUnits[K]>(
+		this: void,
+		unitName: K,
+		location: Vector,
+		findClearSpace: boolean,
+		npcOwner: CBaseEntity | undefined,
+		entityOwner: CBaseEntity | undefined,
+		team: DOTATeam_t,
+		callback: (this: void, unit: T) => void
+	): SpawnGroupHandle;
+}
+
 // Add standard base classes to prototype chain to make `super.*` work as `self.BaseClass.*`
 setmetatable(BaseAbility.prototype, { __index: CDOTA_Ability_Lua ?? C_DOTA_Ability_Lua });
 setmetatable(BaseItem.prototype, { __index: CDOTA_Item_Lua ?? C_DOTA_Item_Lua });
 setmetatable(BaseModifier.prototype, { __index: CDOTA_Modifier_Lua ?? C_DOTA_Modifier_Lua });
+setmetatable(BaseUnit.prototype, { __index: CDOTA_BaseNPC ?? C_DOTA_BaseNPC });
 
 export const registerAbility = (name?: string) => (ability: new () => CDOTA_Ability_Lua | CDOTA_Item_Lua) => {
 	if (name !== undefined) {
@@ -105,6 +166,73 @@ export const registerModifier = (name?: string) => (modifier: new () => CDOTA_Mo
 	LinkLuaModifier(name, fileName, type);
 };
 
+export namespace TransformerAdapter {
+	const registeredUnits: Map<string, BaseUnit> = new Map();
+	export function init() {
+		ListenToGameEvent("npc_spawned", (event) => OnEntitySpawned(event), undefined);
+		ListenToGameEvent("entity_killed", (event) => OnEntityKilled(event), undefined);
+		ListenToGameEvent("entity_hurt", (event) => OnEntityHurt(event), undefined);
+	}
+
+	function OnEntitySpawned(event: GameEventProvidedProperties & NpcSpawnedEvent) {
+		const unit = EntIndexToHScript(event.entindex) as CDOTA_BaseNPC;
+		if (!unit) return;
+		const unitName = unit.GetUnitName();
+		if (registeredUnits.has(unitName)) {
+			toDotaClassInstanceNew(unit, registeredUnits.get(unitName));
+			const newUnit = unit as BaseUnit;
+			newUnit.OnSpawn();
+		}
+	}
+
+	function OnEntityKilled(event: GameEventProvidedProperties & EntityKilledEvent) {
+		const unit = EntIndexToHScript(event.entindex_killed) as CDOTA_BaseNPC;
+		if (!unit) return;
+		const unitName = unit.GetUnitName();
+		if (registeredUnits.has(unitName)) {
+			const attacker = event.entindex_attacker ? EntIndexToHScript(event.entindex_attacker) : undefined;
+			const ability = event.entindex_inflictor ? EntIndexToHScript(event.entindex_inflictor) : undefined;
+			(unit as BaseUnit).OnDeath(attacker as CDOTA_BaseNPC, ability as CDOTABaseAbility, event.damagebits);
+		}
+	}
+
+	function OnEntityHurt(event: GameEventProvidedProperties & EntityHurtEvent) {
+		const unit = EntIndexToHScript(event.entindex_killed) as CDOTA_BaseNPC;
+		if (!unit) return;
+		const unitName = unit.GetUnitName();
+		if (registeredUnits.has(unitName)) {
+			const attacker = event.entindex_attacker ? EntIndexToHScript(event.entindex_attacker) : undefined;
+			const ability = event.entindex_inflictor ? EntIndexToHScript(event.entindex_inflictor) : undefined;
+			(unit as BaseUnit).OnHurt(
+				attacker as CDOTA_BaseNPC,
+				ability as CDOTABaseAbility,
+				event.damage,
+				event.damagebits
+			);
+		}
+	}
+
+	export function setUnit<T extends BaseUnit>(unitName: string, type: T) {
+		registeredUnits.set(unitName, type);
+	}
+}
+
+export const registerUnit = (name?: string) => (unit: new () => CDOTA_BaseNPC) => {
+	TransformerAdapter.setUnit(unit.name, unit.prototype);
+
+	if ("OnPrecache" in unit.prototype) {
+		registerEntityFunction("Precache", (context: CScriptPrecacheContext) => {
+			unit.prototype["OnPrecache"](context);
+		});
+	}
+
+	if ("OnDestroy" in unit.prototype) {
+		registerEntityFunction("UpdateOnRemove", () => {
+			unit.prototype["OnDestroy"]();
+		});
+	}
+};
+
 /**
  * Use to expose top-level functions in entity scripts.
  * Usage: registerEntityFunction("OnStartTouch", (trigger: TriggerStartTouchEvent) => { <your code here> });
@@ -136,6 +264,20 @@ function getFileScope(): [any, string] {
 
 function toDotaClassInstance(instance: any, table: new () => any) {
 	let { prototype } = table;
+	while (prototype) {
+		for (const key in prototype) {
+			// Using hasOwnProperty to ignore methods from metatable added by ExtendInstance
+			// https://github.com/SteamDatabase/GameTracking-Dota2/blob/7edcaa294bdcf493df0846f8bbcd4d47a5c3bd57/game/core/scripts/vscripts/init.lua#L195
+			if (!instance.hasOwnProperty(key)) {
+				instance[key] = prototype[key];
+			}
+		}
+
+		prototype = getmetatable(prototype);
+	}
+}
+
+function toDotaClassInstanceNew(instance: any, prototype: any) {
 	while (prototype) {
 		for (const key in prototype) {
 			// Using hasOwnProperty to ignore methods from metatable added by ExtendInstance

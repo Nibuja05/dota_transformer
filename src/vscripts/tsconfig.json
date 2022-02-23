@@ -4,11 +4,10 @@
 		"outDir": "../../game/scripts/vscripts",
 		"target": "esnext",
 		"lib": ["esnext"],
-		"types": ["@moddota/dota-lua-types/normalized", "dota_transformer"],
+		"types": ["@moddota/dota-lua-types/normalized", "dota_transformer_pkg"],
 		"plugins": [
-			{ "name": "dota_transformer/test_plugin" },
 			{ "transform": "@moddota/dota-lua-types/transformer" },
-			{ "transform": "dota_transformer/vscript_transform" }
+			{ "transform": "dota_transformer_pkg/vscript_transform" }
 		],
 		"moduleResolution": "node",
 		"experimentalDecorators": true,

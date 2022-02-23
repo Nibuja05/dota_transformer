@@ -24,46 +24,67 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const node_modules = require("node_modules-path");
 const valve_kv_1 = require("valve-kv");
-const transformEnums_1 = require("dota_transformer/transformEnums");
-const checkDeclarations_1 = require("dota_transformer/checkDeclarations");
-const transform_1 = require("dota_transformer/transform");
-const GENERATED_FILE_NAME = "/generatedAbilities.kv";
-const GENERATED_FILE_PATH = "generatedAbilities";
-const BASE_NPC_ABILITY_FILE = `
-#base "heroes/meepo.kv"
-
-"DOTAAbilities"
-{
-}`;
-const BASE_ABILITY_OBJECT = `
-"DOTAAbilities"
-{
-}`;
-const GENERATED_TYPES_PATH_ABILITIES = path.join(__dirname, "_generated", "abilities.d.ts");
-const BASE_ABILITY_TYPE = `
-declare const enum Abilities {
-	$,
-}`;
+const transformEnums_1 = require("dota_transformer_pkg/transformEnums");
+const checkDeclarations_1 = require("dota_transformer_pkg/checkDeclarations");
+const transform_1 = require("dota_transformer_pkg/transform");
+const GENERATED_FILE_NAME = {
+    ["Ability" /* Ability */]: "/generatedAbilities.kv",
+    ["Unit" /* Unit */]: "/generatedUnits.kv",
+};
+const GENERATED_FILE_PATH = {
+    ["Ability" /* Ability */]: "generatedAbilities",
+    ["Unit" /* Unit */]: "generatedUnits",
+};
+const BASE_NAME = {
+    ["Ability" /* Ability */]: "DOTAAbilities",
+    ["Unit" /* Unit */]: "DOTAUnits",
+};
+const PATH_ADDITION = {
+    ["Ability" /* Ability */]: "/abilities",
+    ["Unit" /* Unit */]: "/units",
+};
+const PATH_BASE_FILE = {
+    ["Ability" /* Ability */]: "/../npc_abilities_custom.txt",
+    ["Unit" /* Unit */]: "/../npc_units_custom.txt",
+};
+const BASE_OBJECT = (type) => `"${BASE_NAME[type]}"\n{\n}`;
+const GENERATED_TYPES_PATH = {
+    ["Ability" /* Ability */]: path.join(__dirname, "_generated", "abilities.d.ts"),
+    ["Unit" /* Unit */]: path.join(__dirname, "_generated", "units.d.ts"),
+};
+const BASE_TYPE = {
+    ["Ability" /* Ability */]: `
+declare const enum CustomAbilities {
+	$
+}`,
+    ["Unit" /* Unit */]: `
+interface CustomUnits {
+	$
+}`,
+};
 const abilityMap = new Map();
 const curAbilities = new Map();
 const curAbilityNames = new Set();
+const unitMap = new Map();
+const curUnits = new Map();
+const curUnitNames = new Set();
 let curError = false;
 /**
- * Get the path to the ability directory inside "scripts/npc"
- * @returns ability path
+ * Get the path to the directory inside "scripts/npc"
+ * @returns dir path
  */
-function getAbilityPath() {
+function getBasePath(type) {
     const vPath = transform_1.getTsConfig().output;
-    const abilityDir = path.resolve(vPath, "../npc");
-    if (!fs.existsSync(abilityDir))
-        throw new transform_1.AbilityTransformerError("NPC script path not found");
-    const genPath = abilityDir + "/abilities";
+    const baseDir = path.resolve(vPath, "../npc");
+    if (!fs.existsSync(baseDir))
+        throw new transform_1.TransformerError("NPC script path not found");
+    const genPath = baseDir + PATH_ADDITION[type];
     if (!fs.existsSync(genPath))
         fs.mkdirSync(genPath);
     return genPath;
 }
 /**
- * Get the file path of an ability based on the current node.
+ * Get the file path of an object based on the current node.
  * @param node current node
  * @returns current node file path (relative from "vscripts")
  */
@@ -72,57 +93,54 @@ function getCleanedFilePath(node) {
     const absPath = ts.getOriginalNode(node).getSourceFile().fileName;
     const cleanedPath = absPath.substring(absPath.indexOf(rootPath) + rootPath.length + 1);
     return cleanedPath.replace(".ts", "");
-    // const match = absPath.match(/.*vscripts[\/\\](.*)\.ts/);
-    // if (!match) throw new AbilityTransformerError("Invalid File Path: " + absPath);
-    // return match[1] + ".lua";
 }
 /**
- * Get all currently generated abilities.
- * @returns generated abilities object
+ * Get all currently generated objects.
+ * @returns generated objects
  */
-function getAllGeneratedAbilities() {
-    const abilityPath = getAbilityPath();
-    const abilityFilePath = abilityPath + GENERATED_FILE_NAME;
-    if (!fs.existsSync(abilityFilePath)) {
-        transform_1.debugPrint("Failed to find " + GENERATED_FILE_NAME);
+function getAllGeneratedObjects(type) {
+    const thisPath = getBasePath(type);
+    const filePath = thisPath + GENERATED_FILE_NAME[type];
+    if (!fs.existsSync(filePath)) {
+        transform_1.debugPrint("Failed to find " + GENERATED_FILE_NAME[type]);
         return;
     }
-    return valve_kv_1.deserializeFile(abilityFilePath);
+    return valve_kv_1.deserializeFile(filePath);
 }
 /**
- * Get all currently generated abilities.
- * @returns generated abilities object
+ * Get all currently generated objects.
+ * @returns generated objects
  */
-function getGeneratedAbilities(absPath) {
-    const abilityFilePath = getAbilityPathName(absPath);
-    if (!fs.existsSync(abilityFilePath)) {
-        transform_1.debugPrint("Failed to find " + abilityFilePath);
+function getGeneratedObjects(type, absPath) {
+    const filePath = getPathName(type, absPath);
+    if (!fs.existsSync(filePath)) {
+        transform_1.debugPrint("Failed to find " + filePath);
         return;
     }
-    return valve_kv_1.deserializeFile(abilityFilePath);
+    return valve_kv_1.deserializeFile(filePath);
 }
 /**
- * Writes the information of this ability object to a file, based on current configuration.
+ * Writes the information of this object to a file, based on current configuration.
  * @param absPath orig file path (to determine modularization)
- * @param abilityObject ability object to write
+ * @param obj object to write
  */
-function writeGeneratedAbilities(absPath, abilityObject) {
-    const abilityStr = valve_kv_1.serialize({ DOTAAbilities: abilityObject });
-    const abilityFilePath = getAbilityPathName(absPath);
-    transform_1.debugPrint("Write to " + abilityFilePath);
-    fs.writeFileSync(abilityFilePath, abilityStr);
-    addBase(absPath);
+function writeGeneratedObjects(type, absPath, obj) {
+    const content = valve_kv_1.serialize({ [BASE_NAME[type]]: obj });
+    const filePath = getPathName(type, absPath);
+    transform_1.debugPrint("Write to " + filePath);
+    fs.writeFileSync(filePath, content);
+    addBase(type, absPath);
 }
 /**
  * Writes the information of this ability object to a file.
  * Never uses modularization.
- * @param abilityObject
+ * @param obj
  */
-function writeAllGeneratedAbilities(abilityObject) {
-    const abilityStr = valve_kv_1.serialize({ DOTAAbilities: abilityObject });
-    const abilityPath = getAbilityPath() + GENERATED_FILE_NAME;
-    transform_1.debugPrint("Write all abilities");
-    fs.writeFileSync(abilityPath, abilityStr);
+function writeAllGeneratedObjects(type, obj) {
+    const content = valve_kv_1.serialize({ [BASE_NAME[type]]: obj });
+    const filePath = getBasePath(type) + GENERATED_FILE_NAME[type];
+    transform_1.debugPrint(`Write all objects [${type}]`);
+    fs.writeFileSync(filePath, content);
 }
 /**
  * Get the name of the module for this path. Only relevant if the modularization is not none.
@@ -148,78 +166,95 @@ function getModuleName(filePath) {
  * @param absPath source path
  * @returns final ability path
  */
-function getAbilityPathName(absPath) {
-    const abilityPath = getAbilityPath();
-    let abilityFilePath;
+function getPathName(type, absPath) {
+    const thisPath = getBasePath(type);
+    let filePath;
     switch (transform_1.configuration.modularization) {
         case "none" /* None */:
-            abilityFilePath = abilityPath + GENERATED_FILE_NAME;
+            filePath = thisPath + GENERATED_FILE_NAME[type];
             break;
         case "file" /* File */:
         case "folder" /* Folder */:
             const moduleName = getModuleName(absPath);
-            abilityFilePath = path.resolve(abilityPath, GENERATED_FILE_PATH, moduleName + ".kv");
+            filePath = path.resolve(thisPath, GENERATED_FILE_PATH[type], moduleName + ".kv");
     }
-    return abilityFilePath;
+    return filePath;
 }
 /**
  * Add a new base to the generatedAbilities.kv file.
  * Checks if the base already exists.
  * @param absPath abs path of the ability
  */
-function addBase(absPath) {
+function addBase(type, absPath) {
     transform_1.debugPrint("Check bases [Add]");
     if (transform_1.configuration.modularization === "none" /* None */)
         return;
     const moduleName = getModuleName(absPath);
-    const curBases = getBases();
+    const curBases = getBases(type);
     if (curBases.includes(moduleName)) {
         transform_1.debugPrint("Base " + moduleName + " already included");
         return;
     }
-    writeBases([...curBases, moduleName]);
+    writeBases(type, [...curBases, moduleName]);
 }
 /**
  * Remove a base from the generatedAbilities.kv file.
  * Checks if the base actually exists.
  * @param absPath abs path of the ability
  */
-function removeBase(absPath) {
+function removeBase(type, absPath) {
     transform_1.debugPrint("Check bases [Remove]");
     if (transform_1.configuration.modularization === "none" /* None */)
         return;
     const moduleName = getModuleName(absPath);
-    const curBases = getBases();
+    const curBases = getBases(type);
     if (!curBases.includes(moduleName)) {
         transform_1.debugPrint("Base " + moduleName + " not included");
         return;
     }
-    writeBases(curBases.filter((base) => base !== moduleName));
+    writeBases(type, curBases.filter((base) => base !== moduleName));
 }
 /**
- * Checks whether the generated ability kv is already included in the base abilities file.
+ * Checks whether the generated object kv is already included in the base file.
  * If not, it includes it.
  */
-function checkAbilityBase() {
-    const abilityPath = getAbilityPath();
-    const baseAbilityFilePath = abilityPath + "/../npc_abilities_custom.txt";
-    transform_1.debugPrint("Check if " + GENERATED_FILE_NAME + " is already included as base");
-    if (!fs.existsSync(baseAbilityFilePath)) {
-        fs.writeFileSync(baseAbilityFilePath, BASE_NPC_ABILITY_FILE);
+function checkBase(type) {
+    const basePath = getBasePath(type);
+    const baseFilePath = basePath + PATH_BASE_FILE[type];
+    transform_1.debugPrint("Check if " + GENERATED_FILE_NAME[type] + " is already included as base");
+    if (!fs.existsSync(baseFilePath)) {
+        fs.writeFileSync(baseFilePath, BASE_OBJECT(type));
     }
     else {
-        const baseAbilityFile = fs.readFileSync(baseAbilityFilePath).toString();
+        const baseFile = fs.readFileSync(baseFilePath).toString();
         const regex = /^#base\s+["'](.*)["']/gm;
         let match;
         const includedFiles = [];
-        while ((match = regex.exec(baseAbilityFile)) !== null) {
+        while ((match = regex.exec(baseFile)) !== null) {
             if (!match)
                 continue;
             includedFiles.push(match[1]);
         }
-        if (!includedFiles.includes("abilities/generatedAbilities.kv")) {
-            fs.writeFileSync(baseAbilityFilePath, `#base "abilities/generatedAbilities.kv"\n${baseAbilityFile}`);
+        const fileName = PATH_ADDITION[type].substring(1) + GENERATED_FILE_NAME[type];
+        if (!includedFiles.includes(fileName)) {
+            fs.writeFileSync(baseFilePath, `#base "${fileName}"\n${baseFile}`);
         }
+    }
+}
+/**
+ * Get the source file name of a generated object.
+ * @param obj object
+ * @returns source file name
+ */
+function getSourceFileName(type, obj) {
+    if (type === "Ability" /* Ability */) {
+        return obj["ScriptFile"];
+    }
+    else {
+        const content = obj["vscripts"];
+        if (!content)
+            return;
+        return content.replace(".lua", "");
     }
 }
 let initialized = false;
@@ -234,86 +269,97 @@ function inititialize() {
     transform_1.getConfiguration();
     if (transform_1.configuration.disable === true)
         return;
-    console.log("[Ability Transformer] Initialize...");
-    checkAbilityBase();
-    let origfileContent;
-    try {
-        origfileContent = getAllGeneratedAbilities();
-    }
-    catch (_b) {
-        transform_1.debugPrint("Failed to read " + GENERATED_FILE_NAME);
-    }
-    let fileContent = {};
-    if (!origfileContent || Object.keys(origfileContent).length === 0) {
-        transform_1.debugPrint(GENERATED_FILE_NAME + " is empty or not found");
-        const abilityPath = `${getAbilityPath()}${GENERATED_FILE_NAME}`;
-        fs.writeFileSync(abilityPath, BASE_ABILITY_OBJECT);
-        if (transform_1.configuration.modularization !== "none" /* None */) {
-            const abilityBasePath = `${getAbilityPath()}/${GENERATED_FILE_PATH}`;
-            if (!fs.existsSync(abilityBasePath))
-                fs.mkdirSync(abilityBasePath);
+    console.log("[Dota Transformer] Initialize...");
+    for (const type of ["Ability" /* Ability */, "Unit" /* Unit */]) {
+        checkBase(type);
+        let origfileContent;
+        try {
+            origfileContent = getAllGeneratedObjects(type);
         }
-        console.log("\x1b[32m%s\x1b[0m", "[Ability Transformer] Initialization complete!\n");
-        return;
-    }
-    else {
-        fileContent = origfileContent.DOTAAbilities;
-    }
-    for (const [key, value] of Object.entries(fileContent)) {
-        const fileName = value["ScriptFile"];
-        if (!fileName)
-            continue;
-        let abilitySet = abilityMap.get(fileName);
-        if (!abilitySet)
-            abilitySet = new Set();
-        abilitySet.add(key);
-        abilityMap.set(fileName, abilitySet);
-    }
-    const bases = getBases();
-    // Adjust the bases to the current configuration
-    switch (transform_1.configuration.modularization) {
-        case "none" /* None */: {
-            transform_1.debugPrint("Switch to modularization: " + transform_1.configuration.modularization);
-            if (bases.length > 0) {
-                writeAllGeneratedAbilities(fileContent);
-            }
-            const abilityBasePath = `${getAbilityPath()}/${GENERATED_FILE_PATH}`;
-            if (fs.existsSync(abilityBasePath)) {
-                fs.rmdirSync(abilityBasePath, { recursive: true });
-            }
-            break;
+        catch (_b) {
+            transform_1.debugPrint("Failed to read " + GENERATED_FILE_NAME[type]);
         }
-        case "file" /* File */:
-        case "folder" /* Folder */:
-            transform_1.debugPrint("Switch to modularization: " + transform_1.configuration.modularization);
-            const abilityBasePath = `${getAbilityPath()}/${GENERATED_FILE_PATH}`;
-            if (!fs.existsSync(abilityBasePath)) {
-                fs.mkdirSync(abilityBasePath);
+        let fileContent = {};
+        if (!origfileContent || Object.keys(origfileContent).length === 0) {
+            transform_1.debugPrint(GENERATED_FILE_NAME[type] + " is empty or not found");
+            const thisPath = `${getBasePath(type)}${GENERATED_FILE_NAME[type]}`;
+            fs.writeFileSync(thisPath, BASE_OBJECT(type));
+            if (transform_1.configuration.modularization !== "none" /* None */) {
+                const basePath = `${getBasePath(type)}/${GENERATED_FILE_PATH[type]}`;
+                if (!fs.existsSync(basePath))
+                    fs.mkdirSync(basePath);
+            }
+            console.log("\x1b[32m%s\x1b[0m", "[Dota Transformer] Initialization complete!\n");
+            return;
+        }
+        else {
+            fileContent = origfileContent[BASE_NAME[type]];
+        }
+        for (const [key, value] of Object.entries(fileContent)) {
+            const fileName = getSourceFileName(type, value);
+            if (!fileName)
+                continue;
+            if (type === "Ability" /* Ability */) {
+                let abilitySet = abilityMap.get(fileName);
+                if (!abilitySet)
+                    abilitySet = new Set();
+                abilitySet.add(key);
+                abilityMap.set(fileName, abilitySet);
             }
             else {
-                fs.rmdirSync(abilityBasePath, { recursive: true });
-                fs.mkdirSync(abilityBasePath);
+                let unitSet = unitMap.get(fileName);
+                if (!unitSet)
+                    unitSet = new Set();
+                unitSet.add(key);
+                unitMap.set(fileName, unitSet);
             }
-            const moduleMap = new Map();
-            for (const [key, value] of Object.entries(fileContent)) {
-                const fileName = value["ScriptFile"];
-                if (!fileName)
-                    continue;
-                const moduleName = getModuleName(fileName);
-                const curModules = (_a = moduleMap.get(moduleName)) !== null && _a !== void 0 ? _a : {};
-                curModules[key] = value;
-                moduleMap.set(moduleName, curModules);
+        }
+        const bases = getBases(type);
+        // Adjust the bases to the current configuration
+        switch (transform_1.configuration.modularization) {
+            case "none" /* None */: {
+                transform_1.debugPrint("Switch to modularization: " + transform_1.configuration.modularization);
+                if (bases.length > 0) {
+                    writeAllGeneratedObjects(type, fileContent);
+                }
+                const basePath = `${getBasePath(type)}/${GENERATED_FILE_PATH[type]}`;
+                if (fs.existsSync(basePath)) {
+                    fs.rmdirSync(basePath, { recursive: true });
+                }
+                break;
             }
-            transform_1.debugPrint("Write new modularized ability files...");
-            const newBases = [];
-            moduleMap.forEach((value, key) => {
-                newBases.push(key);
-                const abilityStr = valve_kv_1.serialize({ DOTAAbilities: value });
-                const abilityPath = abilityBasePath + `/${key}.kv`;
-                fs.writeFileSync(abilityPath, abilityStr);
-            });
-            writeBases(newBases);
-            break;
+            case "file" /* File */:
+            case "folder" /* Folder */:
+                transform_1.debugPrint("Switch to modularization: " + transform_1.configuration.modularization);
+                const basePath = `${getBasePath(type)}/${GENERATED_FILE_PATH[type]}`;
+                if (!fs.existsSync(basePath)) {
+                    fs.mkdirSync(basePath);
+                }
+                else {
+                    fs.rmdirSync(basePath, { recursive: true });
+                    fs.mkdirSync(basePath);
+                }
+                const moduleMap = new Map();
+                for (const [key, value] of Object.entries(fileContent)) {
+                    const fileName = getSourceFileName(type, value);
+                    if (!fileName)
+                        continue;
+                    const moduleName = getModuleName(fileName);
+                    const curModules = (_a = moduleMap.get(moduleName)) !== null && _a !== void 0 ? _a : {};
+                    curModules[key] = value;
+                    moduleMap.set(moduleName, curModules);
+                }
+                transform_1.debugPrint(`Write new modularized ${type} files...`);
+                const newBases = [];
+                moduleMap.forEach((value, key) => {
+                    newBases.push(key);
+                    const content = valve_kv_1.serialize({ [BASE_NAME[type]]: value });
+                    const thisPath = basePath + `/${key}.kv`;
+                    fs.writeFileSync(thisPath, content);
+                });
+                writeBases(type, newBases);
+                break;
+        }
     }
     console.log("\x1b[32m%s\x1b[0m", "[Ability Transformer] Initialization complete!\n");
 }
@@ -321,13 +367,12 @@ function inititialize() {
  * Get all current bases for the modularization.
  * @returns
  */
-function getBases() {
+function getBases(type) {
     transform_1.debugPrint("Get current bases");
-    const abilityPath = getAbilityPath();
-    const abilityFilePath = abilityPath + GENERATED_FILE_NAME;
-    if (!fs.existsSync(abilityFilePath))
+    const finalFilePath = getBasePath(type) + GENERATED_FILE_PATH[type];
+    if (!fs.existsSync(finalFilePath))
         return [];
-    const content = fs.readFileSync(abilityFilePath, "utf-8");
+    const content = fs.readFileSync(finalFilePath, "utf-8");
     const regex = /^#base\s+\".*?\/(.*).kv\"/gm;
     let match;
     const bases = [];
@@ -340,22 +385,19 @@ function getBases() {
  * Write the bases for a .kv file.
  * @param bases list of bases
  */
-function writeBases(bases) {
+function writeBases(type, bases) {
     let basesString = "";
     for (const base of bases) {
-        basesString += `#base "${GENERATED_FILE_PATH}/${base}.kv"\n`;
+        basesString += `#base "${GENERATED_FILE_PATH[type]}/${base}.kv"\n`;
     }
-    basesString += BASE_ABILITY_OBJECT;
-    const abilityPath = `${getAbilityPath()}${GENERATED_FILE_NAME}`;
+    basesString += BASE_OBJECT(type);
+    const filePath = `${getBasePath(type)}${GENERATED_FILE_NAME[type]}`;
     transform_1.debugPrint("Refresh bases");
-    fs.writeFileSync(abilityPath, basesString);
+    fs.writeFileSync(filePath, basesString);
 }
 /**
  * Create the ability text from the given information and update the ability kvs.
- * @param name name of the ability
- * @param scriptFile scripts file path
- * @param properties base properties of the the ability
- * @param specials ability special values
+ * @param ability ability Information
  */
 function writeAbility(ability) {
     var _a;
@@ -382,31 +424,33 @@ function writeAbility(ability) {
     if (ability.specials.length > 0) {
         kvAbility.AbilitySpecial = Object.assign({}, formattedSpecials);
     }
-    const origfileContent = getGeneratedAbilities(ability.scriptFile);
+    const origfileContent = getGeneratedObjects("Ability" /* Ability */, ability.scriptFile);
     let fileContent = {};
     if (origfileContent) {
         fileContent = origfileContent.DOTAAbilities;
     }
     fileContent[ability.name] = kvAbility;
-    writeGeneratedAbilities(ability.scriptFile, fileContent);
+    writeGeneratedObjects("Ability" /* Ability */, ability.scriptFile, fileContent);
     curAbilityNames.add(ability.name);
-    updateAbilityTypes();
+    updateTypes("Ability" /* Ability */);
 }
 /**
  * Remove an ability from the KV ability file.
+ * @param absPath absolute path of the ability
  * @param abilityName name of the ability
+ * @param remBase should the base be removed?
  */
 function removeAbility(absPath, abilityName, remBase) {
     transform_1.debugPrint("Remove ability: " + abilityName);
-    const origfileContent = getGeneratedAbilities(absPath);
-    const abilityFilePath = getAbilityPathName(absPath);
+    const origfileContent = getGeneratedObjects("Ability" /* Ability */, absPath);
+    const abilityFilePath = getPathName("Ability" /* Ability */, absPath);
     let fileContent = {};
     if (origfileContent) {
         fileContent = origfileContent.DOTAAbilities;
     }
     delete fileContent[abilityName];
     if (remBase)
-        removeBase(absPath);
+        removeBase("Ability" /* Ability */, absPath);
     if (Object.keys(fileContent).length === 0 && transform_1.configuration.modularization !== "none" /* None */) {
         fs.unlinkSync(abilityFilePath);
         return;
@@ -414,7 +458,57 @@ function removeAbility(absPath, abilityName, remBase) {
     const abilityStr = valve_kv_1.serialize({ DOTAAbilities: fileContent });
     fs.writeFileSync(abilityFilePath, abilityStr);
     curAbilityNames.delete(abilityName);
-    updateAbilityTypes();
+    updateTypes("Ability" /* Ability */);
+}
+/**
+ * Create the unit text from the given information and update the unit kvs.
+ * @param unit unit Information
+ */
+function writeUnit(unit) {
+    transform_1.debugPrint("Prepare write of unit");
+    const abilities = {};
+    for (const [index, name] of Object.entries(unit.abilities)) {
+        abilities[`Ability${index}`] = name;
+    }
+    const baseClass = unit.properties.BaseClass;
+    const newProperties = unit.properties;
+    delete newProperties.BaseClass;
+    const kvUnit = Object.assign(Object.assign(Object.assign(Object.assign({ BaseClass: baseClass }, abilities), newProperties), unit.customProperties), { vscripts: `${unit.scriptFile}.lua` });
+    const origfileContent = getGeneratedObjects("Unit" /* Unit */, unit.scriptFile);
+    let fileContent = {};
+    if (origfileContent) {
+        fileContent = origfileContent.DOTAUnits;
+    }
+    fileContent[unit.name] = kvUnit;
+    writeGeneratedObjects("Unit" /* Unit */, unit.scriptFile, fileContent);
+    curUnitNames.add(unit.name);
+    updateTypes("Unit" /* Unit */);
+}
+/**
+ * Remove an unit from the KV ability file.
+ * @param absPath absolute path of the unit
+ * @param unitName name of the unit
+ * @param remBase should the base be removed?
+ */
+function removeUnit(absPath, unitName, remBase) {
+    transform_1.debugPrint("Remove unit: " + unitName);
+    const origfileContent = getGeneratedObjects("Unit" /* Unit */, absPath);
+    const unitFilePath = getPathName("Unit" /* Unit */, absPath);
+    let fileContent = {};
+    if (origfileContent) {
+        fileContent = origfileContent.DOTAUnits;
+    }
+    delete fileContent[unitName];
+    if (remBase)
+        removeBase("Unit" /* Unit */, absPath);
+    if (Object.keys(fileContent).length === 0 && transform_1.configuration.modularization !== "none" /* None */) {
+        fs.unlinkSync(unitFilePath);
+        return;
+    }
+    const unitStr = valve_kv_1.serialize({ DOTAUnits: fileContent });
+    fs.writeFileSync(unitFilePath, unitStr);
+    curAbilityNames.delete(unitName);
+    updateTypes("Ability" /* Ability */);
 }
 /**
  * Get the name and arguments of a decorator node.
@@ -513,6 +607,16 @@ function getObjectNodeEntries(node) {
                     break;
             }
         }
+        else if (ts.isObjectLiteralExpression(property.initializer)) {
+            const subEntries = getObjectNodeEntries(property.initializer);
+            const obj = {};
+            for (const [key, value] of Object.entries(subEntries)) {
+                if (Array.isArray(value))
+                    throw new transform_1.TransformerError("Value array in invalid place!");
+                obj[key] = value;
+            }
+            value = obj;
+        }
         entries[name] = value;
     }
     return entries;
@@ -572,7 +676,7 @@ function getSpecialValues(node) {
                             type = "FIELD_FLOAT" /* FLOAT */;
                     }
                 }
-                else {
+                else if (typeof entries["value"] === "string") {
                     value = entries["value"];
                     if (!transform_1.isInt(entries["value"]))
                         type = "FIELD_FLOAT" /* FLOAT */;
@@ -596,7 +700,7 @@ function getSpecialValues(node) {
  * @param node base property declaration node
  * @returns base properties
  */
-function getBaseProperties(node) {
+function getAbilityBaseProperties(node) {
     const initializer = node.initializer;
     if (!initializer)
         return {};
@@ -608,7 +712,7 @@ function getBaseProperties(node) {
         if (Array.isArray(val)) {
             value = transform_1.isNumberArr(val) ? val.join(" ") : val.join(" | ");
         }
-        else {
+        else if (typeof val === "string") {
             if (val in transformEnums_1.DifferentlyNamesEnums) {
                 value = transformEnums_1.DifferentlyNamesEnums[val];
             }
@@ -618,6 +722,41 @@ function getBaseProperties(node) {
             else {
                 value = val;
             }
+        }
+        else {
+            value = "";
+        }
+        properties[name] = value;
+    }
+    return properties;
+}
+/**
+ * Get the base properties of an ability.
+ * @param node base property declaration node
+ * @returns base properties
+ */
+function getUnitBaseProperties(node) {
+    const initializer = node.initializer;
+    const properties = { BaseClass: "npc_dota_creature" };
+    if (!initializer)
+        return properties;
+    if (!ts.isObjectLiteralExpression(initializer))
+        return properties;
+    for (const [name, val] of Object.entries(getObjectNodeEntries(initializer))) {
+        let value;
+        if (Array.isArray(val)) {
+            value = transform_1.isNumberArr(val) ? val.join(" ") : val.join(" | ");
+        }
+        else if (typeof val === "string") {
+            if (transformEnums_1.NumericBaseProperties.includes(name) && !transform_1.isNumber(val)) {
+                value = `%${val}`;
+            }
+            else {
+                value = val;
+            }
+        }
+        else {
+            value = val;
         }
         properties[name] = value;
     }
@@ -636,7 +775,7 @@ function getCustomProperties(node) {
         return {};
     const properties = {};
     for (const [name, val] of Object.entries(getObjectNodeEntries(initializer))) {
-        properties[name] = Array.isArray(val) ? val.join(" ") : val;
+        properties[name] = Array.isArray(val) ? val.join(" ") : typeof val === "string" ? val : "";
     }
     return properties;
 }
@@ -654,6 +793,33 @@ function getSkipValue(node) {
         return true;
     return false;
 }
+function getUnitAbilities(node) {
+    const initializer = node.initializer;
+    if (!initializer)
+        return {};
+    if (!ts.isArrayLiteralExpression(initializer))
+        return {};
+    const abilities = {};
+    const abilityList = [];
+    for (const entry of initializer.elements) {
+        if (ts.isStringLiteral(entry)) {
+            abilityList.push(entry.text);
+        }
+        if (ts.isObjectLiteralExpression(entry)) {
+            const indexedEntry = getObjectNodeEntries(entry);
+            const index = indexedEntry["index"];
+            abilities[index] = indexedEntry["name"];
+        }
+    }
+    let index = 1;
+    for (const ability of abilityList) {
+        while (index.toString() in abilities) {
+            index++;
+        }
+        abilities[index.toString()] = ability;
+    }
+    return abilities;
+}
 /**
  * Check if a node is an ability class and write it.
  * @param node node to check
@@ -663,78 +829,145 @@ function checkNode(node) {
         const decorators = node.decorators;
         if (!decorators)
             return;
+        if (!node.name)
+            return;
+        let decoratorType;
         for (const deco of decorators) {
             const decoInfo = getDecoratorInfo(deco);
             if (!decoInfo)
                 return;
-            if (decoInfo.name !== "registerAbility")
-                return;
+            switch (decoInfo.name) {
+                case "registerAbility" /* Ability */:
+                    decoratorType = "registerAbility" /* Ability */;
+                    break;
+                case "registerModifier" /* Modifier */:
+                    decoratorType = "registerModifier" /* Modifier */;
+                    break;
+                case "registerHero" /* Hero */:
+                    decoratorType = "registerHero" /* Hero */;
+                    break;
+                case "registerUnit" /* Unit */:
+                    decoratorType = "registerUnit" /* Unit */;
+                    break;
+                default:
+                    return;
+            }
         }
-        if (!node.name)
-            return;
         const name = node.name.escapedText.toString();
-        let values;
-        let props;
-        let customProps;
-        let skip = false;
-        node.forEachChild((child) => {
-            if (ts.isPropertyDeclaration(child)) {
-                const name = getNodeName(child);
-                if (name === transformEnums_1.ProtectedProperties.SpecialValues) {
-                    values = getSpecialValues(child);
+        if (!decoratorType)
+            return;
+        if (decoratorType === "registerAbility" /* Ability */) {
+            let values;
+            let props;
+            let customProps;
+            let skip = false;
+            node.forEachChild((child) => {
+                if (ts.isPropertyDeclaration(child)) {
+                    const name = getNodeName(child);
+                    if (name === transformEnums_1.ProtectedAbilityProperties.SpecialValues) {
+                        values = getSpecialValues(child);
+                    }
+                    if (name === transformEnums_1.ProtectedAbilityProperties.BaseProperties) {
+                        props = getAbilityBaseProperties(child);
+                    }
+                    if (name === transformEnums_1.ProtectedAbilityProperties.SkipAbility) {
+                        skip = getSkipValue(child);
+                    }
+                    if (name === transformEnums_1.ProtectedAbilityProperties.CustomProperties) {
+                        customProps = getCustomProperties(child);
+                    }
                 }
-                if (name === transformEnums_1.ProtectedProperties.BaseProperties) {
-                    props = getBaseProperties(child);
-                }
-                if (name === transformEnums_1.ProtectedProperties.SkipAbility) {
-                    skip = getSkipValue(child);
-                }
-                if (name === transformEnums_1.ProtectedProperties.CustomProperties) {
-                    customProps = getCustomProperties(child);
-                }
-            }
-        });
-        const filePath = getCleanedFilePath(node);
-        if (!skip) {
-            const abilityList = curAbilities.get(filePath);
-            if (!abilityList)
-                return;
-            if (!props) {
-                if (transform_1.configuration.strict === "warn" /* Warn */) {
-                    console.log("\x1b[93m%s\x1b[0m", `[Ability Transformer] No properties for '${name}'. Skipping.`);
-                }
-                if (transform_1.configuration.strict === "error" /* Error */) {
-                    throw new transform_1.AbilityTransformerError(`No properties for '${name}'. Aborting.`);
-                }
-                return;
-            }
-            abilityList.add({
-                name,
-                scriptFile: filePath,
-                properties: props !== null && props !== void 0 ? props : {},
-                specials: values !== null && values !== void 0 ? values : [],
-                customProperties: customProps !== null && customProps !== void 0 ? customProps : {},
             });
+            const filePath = getCleanedFilePath(node);
+            if (!skip) {
+                const abilityList = curAbilities.get(filePath);
+                if (!abilityList)
+                    return;
+                if (!props) {
+                    if (transform_1.configuration.strict === "warn" /* Warn */) {
+                        console.log("\x1b[93m%s\x1b[0m", `[Ability Transformer] No properties for '${name}'. Skipping.`);
+                    }
+                    if (transform_1.configuration.strict === "error" /* Error */) {
+                        throw new transform_1.TransformerError(`No properties for '${name}'. Aborting.`);
+                    }
+                    return;
+                }
+                abilityList.add({
+                    name,
+                    scriptFile: filePath,
+                    properties: props !== null && props !== void 0 ? props : {},
+                    specials: values !== null && values !== void 0 ? values : [],
+                    customProperties: customProps !== null && customProps !== void 0 ? customProps : {},
+                });
+            }
+            else {
+                transform_1.debugPrint("Skipped ability creation for: " + name);
+            }
         }
-        else {
-            transform_1.debugPrint("Skipped ability creation for: " + name);
+        else if (decoratorType === "registerUnit" /* Unit */) {
+            let abilities;
+            let props;
+            let customProps;
+            let skip = false;
+            node.forEachChild((child) => {
+                if (ts.isPropertyDeclaration(child)) {
+                    const name = getNodeName(child);
+                    if (name === transformEnums_1.ProtectedUnitProperties.Abilities) {
+                        abilities = getUnitAbilities(child);
+                    }
+                    if (name === transformEnums_1.ProtectedUnitProperties.BaseProperties) {
+                        props = getUnitBaseProperties(child);
+                    }
+                    if (name === transformEnums_1.ProtectedUnitProperties.SkipUnit) {
+                        skip = getSkipValue(child);
+                    }
+                    if (name === transformEnums_1.ProtectedUnitProperties.CustomProperties) {
+                        customProps = getCustomProperties(child);
+                    }
+                }
+            });
+            const filePath = getCleanedFilePath(node);
+            if (!skip) {
+                const unitList = curUnits.get(filePath);
+                if (!unitList)
+                    return;
+                if (!props) {
+                    if (transform_1.configuration.strict === "warn" /* Warn */) {
+                        console.log("\x1b[93m%s\x1b[0m", `[Ability Transformer] No properties for '${name}'. Skipping.`);
+                    }
+                    if (transform_1.configuration.strict === "error" /* Error */) {
+                        throw new transform_1.TransformerError(`No properties for '${name}'. Aborting.`);
+                    }
+                    return;
+                }
+                unitList.add({
+                    name,
+                    scriptFile: filePath,
+                    properties: props !== null && props !== void 0 ? props : {},
+                    abilities: abilities !== null && abilities !== void 0 ? abilities : {},
+                    customProperties: customProps !== null && customProps !== void 0 ? customProps : {},
+                });
+            }
+            else {
+                transform_1.debugPrint("Skipped unit creation for: " + name);
+            }
         }
     }
 }
-function hasAbility(abilityName, abilities) {
+function hasNamedEntry(name, obj) {
     let found = false;
-    abilities.forEach((ability) => {
-        if (ability.name === abilityName) {
+    obj.forEach((entryName) => {
+        if (entryName.name === name) {
             found = true;
             return;
         }
     });
     return found;
 }
-function getAbilityFileCountByFolder(absPath) {
+function getFileCountByFolder(absPath, map) {
     const curModuleName = getModuleName(absPath);
     let count = 0;
-    for (const [filePath, names] of abilityMap) {
+    for (const [filePath, names] of map) {
         if (filePath === absPath)
             continue;
         const namesSet = names;
@@ -746,19 +979,27 @@ function getAbilityFileCountByFolder(absPath) {
     }
     return count;
 }
-function updateAbilityTypes() {
-    // console.log("UPDATE!!");
+function updateTypes(type) {
     const entries = [];
-    curAbilityNames.forEach((name) => {
-        entries.push(`${name} = "${name}"`);
-    });
-    const content = BASE_ABILITY_TYPE.replace("$", entries.join(",\n\t"));
+    let content = "";
+    if (type === "Ability" /* Ability */) {
+        curAbilityNames.forEach((name) => {
+            entries.push(`${name} = "${name}"`);
+        });
+        content = BASE_TYPE[type].replace("$", entries.join(",\n\t") + ",");
+    }
+    else {
+        curUnitNames.forEach((name) => {
+            entries.push(`${name}: ${name}`);
+        });
+        const ignore = "//@ts-ignore\n\t";
+        content = BASE_TYPE[type].replace("$", ignore + entries.join(`,\n\t${ignore}`) + ";");
+    }
     try {
-        fs.writeFileSync(GENERATED_TYPES_PATH_ABILITIES, content);
+        fs.writeFileSync(GENERATED_TYPES_PATH[type], content);
     }
     catch (_a) {
         // Done
-        console.log(path.resolve(GENERATED_TYPES_PATH_ABILITIES));
     }
 }
 /**
@@ -769,7 +1010,7 @@ function updateAbilityTypes() {
 const removeNode = (node) => {
     if (ts.isPropertyDeclaration(node)) {
         const name = getNodeName(node);
-        if (name in transformEnums_1.ProtectedProperties)
+        if (name in transformEnums_1.ProtectedAbilityProperties)
             return;
     }
     return node;
@@ -794,32 +1035,35 @@ const createDotaTransformer = (program) => (context) => {
         return ts.visitEachChild(node, visit, context);
     };
     return (file) => {
-        var _a;
-        if (preEmitDiagnostics.length > 0 || curError) {
-            curError = true;
-            return file;
-        }
-        preEmitDiagnostics.push(...program.getSyntacticDiagnostics(file));
-        preEmitDiagnostics.push(...program.getSemanticDiagnostics(file));
-        preEmitDiagnostics.push(...program.getDeclarationDiagnostics());
-        if (preEmitDiagnostics.length > 0 || curError) {
-            curError = true;
-            return file;
-        }
-        curError = false;
+        // console.log("In?");
+        // if (preEmitDiagnostics.length > 0 || curError) {
+        // 	curError = true;
+        // 	return file;
+        // }
+        // preEmitDiagnostics.push(...program.getSyntacticDiagnostics(file));
+        // preEmitDiagnostics.push(...program.getSemanticDiagnostics(file));
+        // preEmitDiagnostics.push(...program.getDeclarationDiagnostics());
+        // if (preEmitDiagnostics.length > 0 || curError) {
+        // 	curError = true;
+        // 	return file;
+        // }
+        // curError = false;
+        var _a, _b;
         const fileName = getCleanedFilePath(file);
         let fileAbilities = (_a = abilityMap.get(fileName)) !== null && _a !== void 0 ? _a : new Set();
         curAbilities.set(fileName, new Set());
+        let fileUnits = (_b = unitMap.get(fileName)) !== null && _b !== void 0 ? _b : new Set();
+        curUnits.set(fileName, new Set());
         const res = ts.visitNode(file, visit);
         const curFileAbilities = curAbilities.get(fileName);
         fileAbilities.forEach((abilityName) => {
-            if (!hasAbility(abilityName, curFileAbilities)) {
+            if (!hasNamedEntry(abilityName, curFileAbilities)) {
                 let remBase = false;
                 if (transform_1.configuration.modularization !== "none" /* None */) {
                     remBase = curFileAbilities.size === 0;
                 }
                 if (transform_1.configuration.modularization === "folder" /* Folder */ && remBase) {
-                    const count = getAbilityFileCountByFolder(fileName);
+                    const count = getFileCountByFolder(fileName, abilityMap);
                     remBase = count === 0;
                 }
                 removeAbility(fileName, abilityName, remBase);
@@ -831,6 +1075,26 @@ const createDotaTransformer = (program) => (context) => {
             fileAbilities.add(ability.name);
         });
         abilityMap.set(fileName, fileAbilities);
+        const curFileUnits = curUnits.get(fileName);
+        fileUnits.forEach((unitName) => {
+            if (!hasNamedEntry(unitName, curFileUnits)) {
+                let remBase = false;
+                if (transform_1.configuration.modularization !== "none" /* None */) {
+                    remBase = curFileUnits.size === 0;
+                }
+                if (transform_1.configuration.modularization === "folder" /* Folder */ && remBase) {
+                    const count = getFileCountByFolder(fileName, unitMap);
+                    remBase = count === 0;
+                }
+                removeUnit(fileName, unitName, remBase);
+            }
+        });
+        fileUnits = new Set();
+        curFileUnits.forEach((unit) => {
+            writeUnit(unit);
+            fileUnits.add(unit.name);
+        });
+        unitMap.set(fileName, fileUnits);
         return res;
     };
 };

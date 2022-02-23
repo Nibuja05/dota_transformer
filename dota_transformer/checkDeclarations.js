@@ -24,7 +24,7 @@ const ts = __importStar(require("typescript"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const valve_kv_1 = require("valve-kv");
-const transform_1 = require("dota_transformer/transform");
+const transform_1 = require("dota_transformer_pkg/transform");
 const BASE_NETTABLE_CONTENT = `<!-- kv3 encoding:text:version{e21c7f3c-8a33-41c5-9977-a76d3a32aa0d} format:generic:version{7412167c-06e9-4698-aff2-e63eb59037e7} -->
 {
 	custom_net_tables =
@@ -263,10 +263,10 @@ function checkCurrentGameeventsFile(scriptPath, events) {
 }
 function findScriptPath() {
     if (!fs.existsSync("game"))
-        throw new transform_1.AbilityTransformerError(`"game" path not found`);
+        throw new transform_1.TransformerError(`"game" path not found`);
     const scriptPath = path.join("game", "scripts");
     if (!fs.existsSync(scriptPath))
-        throw new transform_1.AbilityTransformerError(`"${scriptPath}" path not found`);
+        throw new transform_1.TransformerError(`"${scriptPath}" path not found`);
     return scriptPath;
 }
 function validateCustomGameevents(rootDir, outDir, program) {

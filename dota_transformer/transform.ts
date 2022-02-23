@@ -57,7 +57,7 @@ export function debugPrint(msg: string) {
 /**
  * Custom error for this transfomer.
  */
-export class AbilityTransformerError {
+export class TransformerError {
 	constructor(message: string) {
 		const text = `\x1b[91m${message}\x1b[0m`;
 		const error = Error(text);
@@ -70,11 +70,11 @@ export class AbilityTransformerError {
 			},
 			name: {
 				get() {
-					return "AbilityTransformerError";
+					return "TransformerError";
 				},
 			},
 		});
-		Error.captureStackTrace(error, AbilityTransformerError);
+		Error.captureStackTrace(error, TransformerError);
 		return error;
 	}
 }
@@ -102,7 +102,7 @@ let curTSConfig: TSConfiguration | undefined;
  * @returns
  */
 export function getTsConfig(): TSConfiguration {
-	if (!curTSConfig) throw new AbilityTransformerError("TS configuration not found!");
+	if (!curTSConfig) throw new TransformerError("TS configuration not found!");
 	return curTSConfig;
 }
 
@@ -115,7 +115,7 @@ export function setTsConfig(program: ts.Program) {
 	if (curTSConfig) return curTSConfig;
 	const configFilePath = (program.getCompilerOptions() as { configFilePath: string }).configFilePath;
 	const match = configFilePath.match(/(.*)[\/\\]tsconfig\.json/);
-	if (!match) throw new AbilityTransformerError("No valid path for tsconfig file: ");
+	if (!match) throw new TransformerError("No valid path for tsconfig file: ");
 	const configFileDir = match[1];
 
 	const configFileRaw = fs.readFileSync(configFilePath, "utf-8");

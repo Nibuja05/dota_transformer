@@ -8,6 +8,14 @@ type FinalAbilityBaseProperties = {
 	[K in keyof AbilityBaseProperties]: string;
 };
 
+type FinalUnitBaseProperties = {
+	[K in keyof UnitBaseProperties]: string | object;
+};
+
+type FinalUnitAbilities = {
+	[index: string]: string;
+};
+
 interface KVAbility {
 	[name: string]: {
 		[key: string]: string | object;
@@ -32,6 +40,14 @@ interface AbilityInformation {
 	scriptFile: string;
 	properties: FinalAbilityBaseProperties;
 	specials: FinalAbilitySpecialValue[];
+	customProperties: AbilityCustomProperties;
+}
+
+interface UnitInformation {
+	name: string;
+	scriptFile: string;
+	properties: FinalUnitBaseProperties;
+	abilities: FinalUnitAbilities;
 	customProperties: AbilityCustomProperties;
 }
 
@@ -64,4 +80,16 @@ interface TSConfigurationFile {
 		rootDir?: string;
 		outDir?: string;
 	};
+}
+
+declare const enum DecoratorType {
+	Ability = "registerAbility",
+	Modifier = "registerModifier",
+	Unit = "registerUnit",
+	Hero = "registerHero",
+}
+
+declare const enum FileType {
+	Ability = "Ability",
+	Unit = "Unit",
 }

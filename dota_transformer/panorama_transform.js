@@ -20,8 +20,8 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const ts = __importStar(require("typescript"));
-const checkDeclarations_1 = require("dota_transformer/checkDeclarations");
-const transform_1 = require("dota_transformer/transform");
+const checkDeclarations_1 = require("dota_transformer_pkg/checkDeclarations");
+const transform_1 = require("dota_transformer_pkg/transform");
 let initialized = false;
 /**
  * Check what abilities are currently defined already.

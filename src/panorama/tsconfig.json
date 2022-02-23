@@ -4,8 +4,8 @@
 		"outDir": "../../content/panorama/scripts/custom_game",
 		"target": "es2017",
 		"lib": ["es2017"],
-		"types": ["@moddota/panorama-types", "dota_transformer/panorama"],
-		"plugins": [{ "transform": "dota_transformer/panorama_transform" }, { "name": "dota_transformer/test_plugin" }],
+		"types": ["@moddota/panorama-types", "dota_transformer_pkg/panorama"],
+		"plugins": [{ "transform": "dota_transformer_pkg/panorama_transform" }, { "name": "test_plugin" }],
 		"moduleResolution": "node",
 		"strict": true
 	},

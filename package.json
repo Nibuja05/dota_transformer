@@ -11,7 +11,8 @@
 		"dev:panorama": "tsc --project src/panorama/tsconfig.json --watch",
 		"dev:vscripts": "tstl --project src/vscripts/tsconfig.json --watch",
 		"pdev": "ttsc --project src/panorama/tsconfig.json",
-		"tdev": "tsc --project node_modules/dota_transformer/tsconfig.json --watch",
+		"tdev": "tsc --project ./dota_transformer/tsconfig.json --watch",
+		"tpdev": "tsc --project ./test_tlsp/tsconfig.json --watch",
 		"vdev": "tstl --project src/vscripts/tsconfig.json",
 		"ddev": "node node_modules/dota_transformer/checkDeclaration.js"
 	},
@@ -21,6 +22,7 @@
 		"@moddota/panorama-types": "^1.12.0",
 		"fs-extra": "^9.0.0",
 		"npm-run-all": "^4.1.5",
+		"test_plugin": "file:test_tlsp",
 		"typescript": "^4.2.3",
 		"typescript-to-lua": "^1.0.0"
 	},

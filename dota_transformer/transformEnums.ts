@@ -75,9 +75,18 @@ export enum AbilityCastGestureSlotValueNames {
 	ABSOLUTE = "ABSOLUTE",
 }
 
-export enum ProtectedProperties {
+export enum ProtectedAbilityProperties {
 	SpecialValues = "SpecialValues",
 	BaseProperties = "BaseProperties",
 	CustomProperties = "CustomProperties",
 	SkipAbility = "SkipAbility",
+	Precache = "Precache",
+}
+
+export enum ProtectedUnitProperties {
+	BaseProperties = "BaseProperties",
+	Abilities = "Abilities",
+	CustomProperties = "CustomProperties",
+	SkipUnit = "SkipUnit",
+	Precache = "Precache",
 }

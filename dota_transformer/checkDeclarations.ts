@@ -2,7 +2,7 @@ import * as ts from "typescript";
 import * as path from "path";
 import * as fs from "fs";
 import { KVObject, serialize, deserializeFile, KVValue, isKvObject } from "valve-kv";
-import { AbilityTransformerError } from "dota_transformer/transform";
+import { TransformerError } from "dota_transformer_pkg/transform";
 
 const BASE_NETTABLE_CONTENT = `<!-- kv3 encoding:text:version{e21c7f3c-8a33-41c5-9977-a76d3a32aa0d} format:generic:version{7412167c-06e9-4698-aff2-e63eb59037e7} -->
 {
@@ -247,9 +247,9 @@ function checkCurrentGameeventsFile(scriptPath: string, events: GameEvents) {
 }
 
 function findScriptPath(): string {
-	if (!fs.existsSync("game")) throw new AbilityTransformerError(`"game" path not found`);
+	if (!fs.existsSync("game")) throw new TransformerError(`"game" path not found`);
 	const scriptPath = path.join("game", "scripts");
-	if (!fs.existsSync(scriptPath)) throw new AbilityTransformerError(`"${scriptPath}" path not found`);
+	if (!fs.existsSync(scriptPath)) throw new TransformerError(`"${scriptPath}" path not found`);
 	return scriptPath;
 }
 

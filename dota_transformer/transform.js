@@ -19,7 +19,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setTsConfig = exports.getTsConfig = exports.getConfiguration = exports.AbilityTransformerError = exports.debugPrint = exports.isNumberArr = exports.isNumber = exports.isInt = exports.configuration = void 0;
+exports.setTsConfig = exports.getTsConfig = exports.getConfiguration = exports.TransformerError = exports.debugPrint = exports.isNumberArr = exports.isNumber = exports.isInt = exports.configuration = void 0;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 // initially set to the default config
@@ -82,7 +82,7 @@ exports.debugPrint = debugPrint;
 /**
  * Custom error for this transfomer.
  */
-class AbilityTransformerError {
+class TransformerError {
     constructor(message) {
         const text = `\x1b[91m${message}\x1b[0m`;
         const error = Error(text);
@@ -94,15 +94,15 @@ class AbilityTransformerError {
             },
             name: {
                 get() {
-                    return "AbilityTransformerError";
+                    return "TransformerError";
                 },
             },
         });
-        Error.captureStackTrace(error, AbilityTransformerError);
+        Error.captureStackTrace(error, TransformerError);
         return error;
     }
 }
-exports.AbilityTransformerError = AbilityTransformerError;
+exports.TransformerError = TransformerError;
 /**
  * Read the current configuration file or create a new one if none exists.
  */
@@ -128,7 +128,7 @@ let curTSConfig;
  */
 function getTsConfig() {
     if (!curTSConfig)
-        throw new AbilityTransformerError("TS configuration not found!");
+        throw new TransformerError("TS configuration not found!");
     return curTSConfig;
 }
 exports.getTsConfig = getTsConfig;
@@ -143,7 +143,7 @@ function setTsConfig(program) {
     const configFilePath = program.getCompilerOptions().configFilePath;
     const match = configFilePath.match(/(.*)[\/\\]tsconfig\.json/);
     if (!match)
-        throw new AbilityTransformerError("No valid path for tsconfig file: ");
+        throw new TransformerError("No valid path for tsconfig file: ");
     const configFileDir = match[1];
     const configFileRaw = fs.readFileSync(configFilePath, "utf-8");
     const configFile = JSON.parse(configFileRaw);

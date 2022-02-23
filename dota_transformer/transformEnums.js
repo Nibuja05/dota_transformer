@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProtectedProperties = exports.AbilityCastGestureSlotValueNames = exports.SpellDispellableTypesNames = exports.SpellImmunityTypesNames = exports.LinkedSpecialBonusOperationNames = exports.NumericBaseProperties = exports.DifferentlyNamesEnums = exports.DifferentlyNamedAbilityKVs = void 0;
+exports.ProtectedUnitProperties = exports.ProtectedAbilityProperties = exports.AbilityCastGestureSlotValueNames = exports.SpellDispellableTypesNames = exports.SpellImmunityTypesNames = exports.LinkedSpecialBonusOperationNames = exports.NumericBaseProperties = exports.DifferentlyNamesEnums = exports.DifferentlyNamedAbilityKVs = void 0;
 var DifferentlyNamedAbilityKVs;
 (function (DifferentlyNamedAbilityKVs) {
     DifferentlyNamedAbilityKVs["Type"] = "AbilityType";
@@ -77,10 +77,19 @@ var AbilityCastGestureSlotValueNames;
     AbilityCastGestureSlotValueNames["DEFAULT"] = "DEFAULT";
     AbilityCastGestureSlotValueNames["ABSOLUTE"] = "ABSOLUTE";
 })(AbilityCastGestureSlotValueNames = exports.AbilityCastGestureSlotValueNames || (exports.AbilityCastGestureSlotValueNames = {}));
-var ProtectedProperties;
-(function (ProtectedProperties) {
-    ProtectedProperties["SpecialValues"] = "SpecialValues";
-    ProtectedProperties["BaseProperties"] = "BaseProperties";
-    ProtectedProperties["CustomProperties"] = "CustomProperties";
-    ProtectedProperties["SkipAbility"] = "SkipAbility";
-})(ProtectedProperties = exports.ProtectedProperties || (exports.ProtectedProperties = {}));
+var ProtectedAbilityProperties;
+(function (ProtectedAbilityProperties) {
+    ProtectedAbilityProperties["SpecialValues"] = "SpecialValues";
+    ProtectedAbilityProperties["BaseProperties"] = "BaseProperties";
+    ProtectedAbilityProperties["CustomProperties"] = "CustomProperties";
+    ProtectedAbilityProperties["SkipAbility"] = "SkipAbility";
+    ProtectedAbilityProperties["Precache"] = "Precache";
+})(ProtectedAbilityProperties = exports.ProtectedAbilityProperties || (exports.ProtectedAbilityProperties = {}));
+var ProtectedUnitProperties;
+(function (ProtectedUnitProperties) {
+    ProtectedUnitProperties["BaseProperties"] = "BaseProperties";
+    ProtectedUnitProperties["Abilities"] = "Abilities";
+    ProtectedUnitProperties["CustomProperties"] = "CustomProperties";
+    ProtectedUnitProperties["SkipUnit"] = "SkipUnit";
+    ProtectedUnitProperties["Precache"] = "Precache";
+})(ProtectedUnitProperties = exports.ProtectedUnitProperties || (exports.ProtectedUnitProperties = {}));
