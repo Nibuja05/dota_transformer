@@ -1,12 +1,19 @@
 import { BaseUnit, registerUnit } from "../lib/dota_ts_adapter";
 
+export class my_base_unit extends BaseUnit {
+	BaseProperties: UnitBaseProperties = {
+		BaseClass: "npc_dota_creature",
+		Model: "models/creeps/neutral_creeps/n_creep_gnoll/n_creep_gnoll_frost.vmdl",
+	};
+}
+
 @registerUnit()
-export class my_test_unit extends BaseUnit {
+export class my_test_unit extends my_base_unit {
 	SkipUnit: boolean = false;
 
 	BaseProperties: UnitBaseProperties = {
 		BaseClass: "npc_dota_creature",
-		Model: "models/creeps/neutral_creeps/n_creep_gnoll/n_creep_gnoll_frost.vmdl",
+		// Model: "models/creeps/neutral_creeps/n_creep_gnoll/n_creep_gnoll_frost.vmdl",
 		SoundSet: "n_creep_Ranged",
 		GameSoundsFile: "soundevents/game_sounds_creeps.vsndevts",
 		Level: 1,

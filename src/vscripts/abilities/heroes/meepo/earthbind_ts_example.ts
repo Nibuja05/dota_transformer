@@ -4,8 +4,6 @@ import { BaseAbility, registerAbility } from "../../../lib/dota_ts_adapter";
 export class meepo_earthbind_ts_example extends BaseAbility {
 	particle?: ParticleID;
 
-	test = CustomAbilities.meepo_earthbind_ts_example;
-
 	SkipAbility: boolean = false;
 	SpecialValues: AbilitySpecials = {
 		duration: 2,
@@ -18,7 +16,7 @@ export class meepo_earthbind_ts_example extends BaseAbility {
 		},
 	};
 	BaseProperties: AbilityBaseProperties = {
-		TextureName: "meepo_earthbind",
+		// TextureName: "meepo_earthbind",
 		Behavior: [AbilityBehavior.AOE, AbilityBehavior.POINT, AbilityBehavior.IGNORE_BACKSWING],
 		SpellImmunityType: SpellImmunityTypes.ENEMIES_NO,
 		FightRecapLevel: 1,

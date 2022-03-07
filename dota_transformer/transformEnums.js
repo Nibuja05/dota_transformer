@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProtectedUnitProperties = exports.ProtectedAbilityProperties = exports.AbilityCastGestureSlotValueNames = exports.SpellDispellableTypesNames = exports.SpellImmunityTypesNames = exports.LinkedSpecialBonusOperationNames = exports.NumericBaseProperties = exports.DifferentlyNamesEnums = exports.DifferentlyNamedAbilityKVs = void 0;
+exports.BaseClasses = exports.ProtectedUnitProperties = exports.ProtectedAbilityProperties = exports.AbilityCastGestureSlotValueNames = exports.SpellDispellableTypesNames = exports.SpellImmunityTypesNames = exports.LinkedSpecialBonusOperationNames = exports.NumericBaseProperties = exports.DifferentlyNamesEnums = exports.DifferentlyNamedAbilityKVs = void 0;
 var DifferentlyNamedAbilityKVs;
 (function (DifferentlyNamedAbilityKVs) {
     DifferentlyNamedAbilityKVs["Type"] = "AbilityType";
@@ -93,3 +93,9 @@ var ProtectedUnitProperties;
     ProtectedUnitProperties["SkipUnit"] = "SkipUnit";
     ProtectedUnitProperties["Precache"] = "Precache";
 })(ProtectedUnitProperties = exports.ProtectedUnitProperties || (exports.ProtectedUnitProperties = {}));
+var BaseClasses;
+(function (BaseClasses) {
+    BaseClasses[BaseClasses["BaseAbility"] = 0] = "BaseAbility";
+    BaseClasses[BaseClasses["BaseModifier"] = 1] = "BaseModifier";
+    BaseClasses[BaseClasses["BaseUnit"] = 2] = "BaseUnit";
+})(BaseClasses = exports.BaseClasses || (exports.BaseClasses = {}));

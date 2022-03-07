@@ -90,3 +90,9 @@ export enum ProtectedUnitProperties {
 	SkipUnit = "SkipUnit",
 	Precache = "Precache",
 }
+
+export enum BaseClasses {
+	BaseAbility,
+	BaseModifier,
+	BaseUnit,
+}

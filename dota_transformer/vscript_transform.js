@@ -465,12 +465,13 @@ function removeAbility(absPath, abilityName, remBase) {
  * @param unit unit Information
  */
 function writeUnit(unit) {
+    var _a;
     transform_1.debugPrint("Prepare write of unit");
     const abilities = {};
     for (const [index, name] of Object.entries(unit.abilities)) {
         abilities[`Ability${index}`] = name;
     }
-    const baseClass = unit.properties.BaseClass;
+    const baseClass = (_a = unit.properties.BaseClass) !== null && _a !== void 0 ? _a : "npc_dota_creature";
     const newProperties = unit.properties;
     delete newProperties.BaseClass;
     const kvUnit = Object.assign(Object.assign(Object.assign(Object.assign({ BaseClass: baseClass }, abilities), newProperties), unit.customProperties), { vscripts: `${unit.scriptFile}.lua` });
@@ -824,7 +825,7 @@ function getUnitAbilities(node) {
  * Check if a node is an ability class and write it.
  * @param node node to check
  */
-function checkNode(node) {
+function checkNode(node, program) {
     if (ts.isClassDeclaration(node)) {
         const decorators = node.decorators;
         if (!decorators)
@@ -857,27 +858,33 @@ function checkNode(node) {
         if (!decoratorType)
             return;
         if (decoratorType === "registerAbility" /* Ability */) {
-            let values;
-            let props;
-            let customProps;
+            let values = [];
+            let props = {};
+            let customProps = {};
             let skip = false;
-            node.forEachChild((child) => {
-                if (ts.isPropertyDeclaration(child)) {
-                    const name = getNodeName(child);
-                    if (name === transformEnums_1.ProtectedAbilityProperties.SpecialValues) {
-                        values = getSpecialValues(child);
+            const typeChecker = program.getTypeChecker();
+            const nodes = getClassHeritages(node, typeChecker);
+            for (const classNode of nodes) {
+                classNode.forEachChild((child) => {
+                    if (ts.isPropertyDeclaration(child)) {
+                        const name = getNodeName(child);
+                        if (name === transformEnums_1.ProtectedAbilityProperties.SpecialValues) {
+                            values = values.concat(getSpecialValues(child));
+                        }
+                        if (name === transformEnums_1.ProtectedAbilityProperties.BaseProperties) {
+                            props = Object.assign(Object.assign({}, props), getAbilityBaseProperties(child));
+                        }
+                        if (name === transformEnums_1.ProtectedAbilityProperties.SkipAbility) {
+                            if (getSkipValue(child)) {
+                                skip = true;
+                            }
+                        }
+                        if (name === transformEnums_1.ProtectedAbilityProperties.CustomProperties) {
+                            customProps = Object.assign(Object.assign({}, customProps), getCustomProperties(child));
+                        }
                     }
-                    if (name === transformEnums_1.ProtectedAbilityProperties.BaseProperties) {
-                        props = getAbilityBaseProperties(child);
-                    }
-                    if (name === transformEnums_1.ProtectedAbilityProperties.SkipAbility) {
-                        skip = getSkipValue(child);
-                    }
-                    if (name === transformEnums_1.ProtectedAbilityProperties.CustomProperties) {
-                        customProps = getCustomProperties(child);
-                    }
-                }
-            });
+                });
+            }
             const filePath = getCleanedFilePath(node);
             if (!skip) {
                 const abilityList = curAbilities.get(filePath);
@@ -895,9 +902,9 @@ function checkNode(node) {
                 abilityList.add({
                     name,
                     scriptFile: filePath,
-                    properties: props !== null && props !== void 0 ? props : {},
-                    specials: values !== null && values !== void 0 ? values : [],
-                    customProperties: customProps !== null && customProps !== void 0 ? customProps : {},
+                    properties: props,
+                    specials: values,
+                    customProperties: customProps,
                 });
             }
             else {
@@ -905,27 +912,33 @@ function checkNode(node) {
             }
         }
         else if (decoratorType === "registerUnit" /* Unit */) {
-            let abilities;
-            let props;
-            let customProps;
+            let abilities = {};
+            let props = {};
+            let customProps = {};
             let skip = false;
-            node.forEachChild((child) => {
-                if (ts.isPropertyDeclaration(child)) {
-                    const name = getNodeName(child);
-                    if (name === transformEnums_1.ProtectedUnitProperties.Abilities) {
-                        abilities = getUnitAbilities(child);
+            const typeChecker = program.getTypeChecker();
+            const nodes = getClassHeritages(node, typeChecker);
+            for (const classNode of nodes) {
+                classNode.forEachChild((child) => {
+                    if (ts.isPropertyDeclaration(child)) {
+                        const name = getNodeName(child);
+                        if (name === transformEnums_1.ProtectedUnitProperties.Abilities) {
+                            abilities = Object.assign(Object.assign({}, abilities), getUnitAbilities(child));
+                        }
+                        if (name === transformEnums_1.ProtectedUnitProperties.BaseProperties) {
+                            props = Object.assign(Object.assign({}, props), getUnitBaseProperties(child));
+                        }
+                        if (name === transformEnums_1.ProtectedUnitProperties.SkipUnit) {
+                            if (getSkipValue(child)) {
+                                skip = true;
+                            }
+                        }
+                        if (name === transformEnums_1.ProtectedUnitProperties.CustomProperties) {
+                            customProps = Object.assign(Object.assign({}, customProps), getCustomProperties(child));
+                        }
                     }
-                    if (name === transformEnums_1.ProtectedUnitProperties.BaseProperties) {
-                        props = getUnitBaseProperties(child);
-                    }
-                    if (name === transformEnums_1.ProtectedUnitProperties.SkipUnit) {
-                        skip = getSkipValue(child);
-                    }
-                    if (name === transformEnums_1.ProtectedUnitProperties.CustomProperties) {
-                        customProps = getCustomProperties(child);
-                    }
-                }
-            });
+                });
+            }
             const filePath = getCleanedFilePath(node);
             if (!skip) {
                 const unitList = curUnits.get(filePath);
@@ -943,9 +956,9 @@ function checkNode(node) {
                 unitList.add({
                     name,
                     scriptFile: filePath,
-                    properties: props !== null && props !== void 0 ? props : {},
-                    abilities: abilities !== null && abilities !== void 0 ? abilities : {},
-                    customProperties: customProps !== null && customProps !== void 0 ? customProps : {},
+                    properties: props,
+                    abilities: abilities,
+                    customProperties: customProps,
                 });
             }
             else {
@@ -953,6 +966,30 @@ function checkNode(node) {
             }
         }
     }
+}
+function getClassHeritages(node, typeChecker) {
+    let superClasses = [];
+    const clauses = node.heritageClauses;
+    if (clauses) {
+        for (const clause of clauses) {
+            const types = clause.types;
+            types.forEach((clauseType) => {
+                const exp = clauseType.expression;
+                if (exp.getText() in transformEnums_1.BaseClasses) {
+                    return;
+                }
+                const type = typeChecker.getTypeAtLocation(exp);
+                if (!type.symbol.declarations)
+                    return;
+                const declaration = type.symbol.declarations[0];
+                if (ts.isClassDeclaration(declaration)) {
+                    superClasses = superClasses.concat(getClassHeritages(declaration, typeChecker));
+                }
+            });
+        }
+    }
+    superClasses.push(node);
+    return superClasses;
 }
 function hasNamedEntry(name, obj) {
     let found = false;
@@ -1012,6 +1049,8 @@ const removeNode = (node) => {
         const name = getNodeName(node);
         if (name in transformEnums_1.ProtectedAbilityProperties)
             return;
+        if (name in transformEnums_1.ProtectedUnitProperties)
+            return;
     }
     return node;
 };
@@ -1029,7 +1068,7 @@ const createDotaTransformer = (program) => (context) => {
     const visit = (node) => {
         if (transform_1.configuration.disable === true)
             return node;
-        checkNode(node);
+        checkNode(node, program);
         if (!removeNode(node))
             return;
         return ts.visitEachChild(node, visit, context);

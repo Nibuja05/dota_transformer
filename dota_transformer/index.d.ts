@@ -216,7 +216,7 @@ interface UnitBaseProperties {
 	/**
 	 * A base class that custom unit will extend.
 	 */
-	BaseClass: string;
+	BaseClass?: string;
 	/**
 	 * Path to the vscripts file, that would be executed for each spawned unit.
 	 * Unit is available in file's scope under `thisEntity` variable name.

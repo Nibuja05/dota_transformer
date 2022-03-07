@@ -13,6 +13,7 @@ import {
 	AbilityCastGestureSlotValueNames,
 	ProtectedAbilityProperties,
 	ProtectedUnitProperties,
+	BaseClasses,
 } from "dota_transformer_pkg/transformEnums";
 import { validateNettables } from "dota_transformer_pkg/checkDeclarations";
 import {
@@ -498,7 +499,7 @@ function writeUnit(unit: UnitInformation) {
 		abilities[`Ability${index}`] = name;
 	}
 
-	const baseClass = unit.properties.BaseClass;
+	const baseClass = unit.properties.BaseClass ?? "npc_dota_creature";
 	const newProperties: { [name: string]: string | object } = unit.properties;
 	delete newProperties.BaseClass;
 	const kvUnit: KVObject = {
@@ -836,7 +837,7 @@ function getUnitAbilities(node: ts.PropertyDeclaration): FinalUnitAbilities {
  * Check if a node is an ability class and write it.
  * @param node node to check
  */
-function checkNode(node: ts.Node) {
+function checkNode(node: ts.Node, program: ts.Program) {
 	if (ts.isClassDeclaration(node)) {
 		const decorators = node.decorators;
 		if (!decorators) return;
@@ -865,27 +866,36 @@ function checkNode(node: ts.Node) {
 		const name = node.name.escapedText.toString();
 		if (!decoratorType) return;
 		if (decoratorType === DecoratorType.Ability) {
-			let values: FinalAbilitySpecialValue[] | undefined;
-			let props: FinalAbilityBaseProperties | undefined;
-			let customProps: CustomProperties | undefined;
+			let values: FinalAbilitySpecialValue[] = [];
+			let props: FinalAbilityBaseProperties = {};
+			let customProps: CustomProperties = {};
 			let skip = false;
-			node.forEachChild((child) => {
-				if (ts.isPropertyDeclaration(child)) {
-					const name = getNodeName(child);
-					if (name === ProtectedAbilityProperties.SpecialValues) {
-						values = getSpecialValues(child);
+
+			const typeChecker = program.getTypeChecker();
+			const nodes = getClassHeritages(node, typeChecker);
+
+			for (const classNode of nodes) {
+				classNode.forEachChild((child) => {
+					if (ts.isPropertyDeclaration(child)) {
+						const name = getNodeName(child);
+						if (name === ProtectedAbilityProperties.SpecialValues) {
+							values = values.concat(getSpecialValues(child));
+						}
+						if (name === ProtectedAbilityProperties.BaseProperties) {
+							props = { ...props, ...getAbilityBaseProperties(child) };
+						}
+						if (name === ProtectedAbilityProperties.SkipAbility) {
+							if (getSkipValue(child)) {
+								skip = true;
+							}
+						}
+						if (name === ProtectedAbilityProperties.CustomProperties) {
+							customProps = { ...customProps, ...getCustomProperties(child) };
+						}
 					}
-					if (name === ProtectedAbilityProperties.BaseProperties) {
-						props = getAbilityBaseProperties(child);
-					}
-					if (name === ProtectedAbilityProperties.SkipAbility) {
-						skip = getSkipValue(child);
-					}
-					if (name === ProtectedAbilityProperties.CustomProperties) {
-						customProps = getCustomProperties(child);
-					}
-				}
-			});
+				});
+			}
+
 			const filePath = getCleanedFilePath(node);
 			if (!skip) {
 				const abilityList = curAbilities.get(filePath);
@@ -907,35 +917,44 @@ function checkNode(node: ts.Node) {
 				abilityList.add({
 					name,
 					scriptFile: filePath,
-					properties: props ?? {},
-					specials: values ?? [],
-					customProperties: customProps ?? {},
+					properties: props,
+					specials: values,
+					customProperties: customProps,
 				});
 			} else {
 				debugPrint("Skipped ability creation for: " + name);
 			}
 		} else if (decoratorType === DecoratorType.Unit) {
-			let abilities: FinalUnitAbilities | undefined;
-			let props: FinalUnitBaseProperties | undefined;
-			let customProps: CustomProperties | undefined;
+			let abilities: FinalUnitAbilities = {};
+			let props: FinalUnitBaseProperties = {};
+			let customProps: CustomProperties = {};
 			let skip = false;
-			node.forEachChild((child) => {
-				if (ts.isPropertyDeclaration(child)) {
-					const name = getNodeName(child);
-					if (name === ProtectedUnitProperties.Abilities) {
-						abilities = getUnitAbilities(child);
+
+			const typeChecker = program.getTypeChecker();
+			const nodes = getClassHeritages(node, typeChecker);
+
+			for (const classNode of nodes) {
+				classNode.forEachChild((child) => {
+					if (ts.isPropertyDeclaration(child)) {
+						const name = getNodeName(child);
+						if (name === ProtectedUnitProperties.Abilities) {
+							abilities = { ...abilities, ...getUnitAbilities(child) };
+						}
+						if (name === ProtectedUnitProperties.BaseProperties) {
+							props = { ...props, ...getUnitBaseProperties(child) };
+						}
+						if (name === ProtectedUnitProperties.SkipUnit) {
+							if (getSkipValue(child)) {
+								skip = true;
+							}
+						}
+						if (name === ProtectedUnitProperties.CustomProperties) {
+							customProps = { ...customProps, ...getCustomProperties(child) };
+						}
 					}
-					if (name === ProtectedUnitProperties.BaseProperties) {
-						props = getUnitBaseProperties(child);
-					}
-					if (name === ProtectedUnitProperties.SkipUnit) {
-						skip = getSkipValue(child);
-					}
-					if (name === ProtectedUnitProperties.CustomProperties) {
-						customProps = getCustomProperties(child);
-					}
-				}
-			});
+				});
+			}
+
 			const filePath = getCleanedFilePath(node);
 			if (!skip) {
 				const unitList = curUnits.get(filePath);
@@ -957,15 +976,39 @@ function checkNode(node: ts.Node) {
 				unitList.add({
 					name,
 					scriptFile: filePath,
-					properties: props ?? {},
-					abilities: abilities ?? {},
-					customProperties: customProps ?? {},
+					properties: props,
+					abilities: abilities,
+					customProperties: customProps,
 				});
 			} else {
 				debugPrint("Skipped unit creation for: " + name);
 			}
 		}
 	}
+}
+
+function getClassHeritages(node: ts.ClassDeclaration, typeChecker: ts.TypeChecker) {
+	let superClasses: ts.ClassDeclaration[] = [];
+	const clauses = node.heritageClauses;
+	if (clauses) {
+		for (const clause of clauses) {
+			const types = clause.types;
+			types.forEach((clauseType) => {
+				const exp = clauseType.expression;
+				if (exp.getText() in BaseClasses) {
+					return;
+				}
+				const type = typeChecker.getTypeAtLocation(exp);
+				if (!type.symbol.declarations) return;
+				const declaration = type.symbol.declarations[0];
+				if (ts.isClassDeclaration(declaration)) {
+					superClasses = superClasses.concat(getClassHeritages(declaration, typeChecker));
+				}
+			});
+		}
+	}
+	superClasses.push(node);
+	return superClasses;
 }
 
 function hasNamedEntry(name: string, obj: Set<{ name: string }>): boolean {
@@ -1024,6 +1067,7 @@ const removeNode: ts.Visitor = (node) => {
 	if (ts.isPropertyDeclaration(node)) {
 		const name = getNodeName(node);
 		if (name in ProtectedAbilityProperties) return;
+		if (name in ProtectedUnitProperties) return;
 	}
 	return node;
 };
@@ -1045,7 +1089,7 @@ const createDotaTransformer =
 		const visit: ts.Visitor = (node) => {
 			if (configuration.disable === true) return node;
 
-			checkNode(node);
+			checkNode(node, program);
 			if (!removeNode(node)) return;
 			return ts.visitEachChild(node, visit, context);
 		};

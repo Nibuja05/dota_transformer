@@ -12,10 +12,6 @@
 
 -   create (similar to abilities)
 
-### Transformer
-
--   add possibility of class inheritance
-
 ### Localization
 
 -   add localization checks
