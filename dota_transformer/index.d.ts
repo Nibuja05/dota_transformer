@@ -176,6 +176,15 @@ interface CDOTA_BaseNPC {
 	PrecacheKV: PrecacheBlock;
 }
 
+interface CDOTA_BaseNPC_Hero {
+	/**
+	 * Define all common KV values for your unit here.
+	 *
+	 * *Only use enums or literal values.*
+	 */
+	BaseProperties: HeroBaseProperties;
+}
+
 type UnitAbility = CustomAbilities | string | UnitAbilityBlock;
 
 interface UnitAbilityBlock {
@@ -216,7 +225,7 @@ interface UnitBaseProperties {
 	/**
 	 * A base class that custom unit will extend.
 	 */
-	BaseClass?: string;
+	BaseClass?: UnitBaseClasses;
 	/**
 	 * Path to the vscripts file, that would be executed for each spawned unit.
 	 * Unit is available in file's scope under `thisEntity` variable name.
@@ -415,17 +424,12 @@ interface UnitBaseProperties {
 	 */
 	VisionNighttimeRange?: number;
 
-	AttackRangeActivityModifiers?: AttackRangeActivityModifiersBlock;
+	AttackRangeActivityModifiers?: Partial<{ [range in AttackRangeNames]: number }>;
 
 	/**
 	 * Valid only when BaseClass is 'npc_dota_creature' or it's subclass.
 	 */
 	Creature?: CreatureBlock;
-}
-
-interface AttackRangeActivityModifiersBlock {
-	attack_normal_range: number;
-	attack_long_range: number;
 }
 
 interface CreatureBlock {
@@ -495,4 +499,327 @@ declare const enum NpcUnitRelationshipType {
 	HERO = "DOTA_NPC_UNIT_RELATIONSHIP_TYPE_HERO",
 	SIEGE = "DOTA_NPC_UNIT_RELATIONSHIP_TYPE_SIEGE",
 	WARD = "DOTA_NPC_UNIT_RELATIONSHIP_TYPE_WARD",
+}
+
+declare const enum UnitBaseClasses {
+	Thinker = "npc_dota_thinker",
+	Companion = "npc_dota_companion",
+	Base = "npc_dota_base",
+	Creep_lane = "npc_dota_creep_lane",
+	Tower = "npc_dota_tower",
+	Watch_tower = "npc_dota_watch_tower",
+	Filler = "npc_dota_filler",
+	Healer = "npc_dota_healer",
+	Building = "npc_dota_building",
+	Fort = "npc_dota_fort",
+	Creep_siege = "npc_dota_creep_siege",
+	Ent_dota_fountain = "ent_dota_fountain",
+	Base_additive = "npc_dota_base_additive",
+	Zeus_cloud = "npc_dota_zeus_cloud",
+	Tusk_frozen_sigil = "npc_dota_tusk_frozen_sigil",
+	Elder_titan_ancestral_spirit = "npc_dota_elder_titan_ancestral_spirit",
+	Creep_neutral = "npc_dota_creep_neutral",
+	Creep = "npc_dota_creep",
+	Ward_base = "npc_dota_ward_base",
+	Ward_base_truesight = "npc_dota_ward_base_truesight",
+	Courier = "npc_dota_courier",
+	Flying_courier = "npc_dota_flying_courier",
+	Witch_doctor_death_ward = "npc_dota_witch_doctor_death_ward",
+	Shadowshaman_serpentward = "npc_dota_shadowshaman_serpentward",
+	Venomancer_plagueward = "npc_dota_venomancer_plagueward",
+	Invoker_forged_spirit = "npc_dota_invoker_forged_spirit",
+	Broodmother_spiderling = "npc_dota_broodmother_spiderling",
+	Clinkz_skeleton_archer = "npc_dota_clinkz_skeleton_archer",
+	Roshan = "npc_dota_roshan",
+	Roshan_halloween = "npc_dota_roshan_halloween",
+	Ent_dota_radiant_candybucket = "ent_dota_radiant_candybucket",
+	Warlock_golem = "npc_dota_warlock_golem",
+	Beastmaster_hawk = "npc_dota_beastmaster_hawk",
+	Beastmaster_boar = "npc_dota_beastmaster_boar",
+	Brewmaster_earth = "npc_dota_brewmaster_earth",
+	Brewmaster_storm = "npc_dota_brewmaster_storm",
+	Brewmaster_fire = "npc_dota_brewmaster_fire",
+	Brewmaster_void = "npc_dota_brewmaster_void",
+	Unit_undying_tombstone = "npc_dota_unit_undying_tombstone",
+	Unit_undying_zombie = "npc_dota_unit_undying_zombie",
+	Rattletrap_cog = "npc_dota_rattletrap_cog",
+	Broodmother_web = "npc_dota_broodmother_web",
+	Earth_spirit_stone = "npc_dota_earth_spirit_stone",
+	Lone_druid_bear = "npc_dota_lone_druid_bear",
+	Visage_familiar = "npc_dota_visage_familiar",
+	Ent_dota_halloffame = "ent_dota_halloffame",
+	Ent_dota_promo = "ent_dota_promo",
+	Wisp_spirit = "npc_dota_wisp_spirit",
+	Creep_diretide = "npc_dota_creep_diretide",
+	Roquelaire = "npc_dota_roquelaire",
+	Greevil = "npc_dota_greevil",
+	Loot_greevil = "npc_dota_loot_greevil",
+	Greevil_miniboss_black = "npc_dota_greevil_miniboss_black",
+	Greevil_miniboss_blue = "npc_dota_greevil_miniboss_blue",
+	Greevil_miniboss_red = "npc_dota_greevil_miniboss_red",
+	Greevil_miniboss_yellow = "npc_dota_greevil_miniboss_yellow",
+	Greevil_miniboss_white = "npc_dota_greevil_miniboss_white",
+	Greevil_minion_white = "npc_dota_greevil_minion_white",
+	Greevil_minion_black = "npc_dota_greevil_minion_black",
+	Greevil_minion_red = "npc_dota_greevil_minion_red",
+	Greevil_minion_blue = "npc_dota_greevil_minion_blue",
+	Greevil_minion_yellow = "npc_dota_greevil_minion_yellow",
+	Greevil_miniboss_green = "npc_dota_greevil_miniboss_green",
+	Greevil_miniboss_orange = "npc_dota_greevil_miniboss_orange",
+	Greevil_miniboss_purple = "npc_dota_greevil_miniboss_purple",
+	Greevil_minion_orange = "npc_dota_greevil_minion_orange",
+	Greevil_minion_purple = "npc_dota_greevil_minion_purple",
+	Greevil_minion_green = "npc_dota_greevil_minion_green",
+	Ignis_fatuus = "npc_dota_ignis_fatuus",
+	Target_dummy = "npc_dota_target_dummy",
+	Looping_sound = "npc_dota_looping_sound",
+	Techies_mines = "npc_dota_techies_mines",
+	Techies_minefield_sign = "npc_dota_techies_minefield_sign",
+	Treant_eyes = "npc_dota_treant_eyes",
+	Lich_ice_spire = "npc_dota_lich_ice_spire",
+	Phantomassassin_gravestone = "npc_dota_phantomassassin_gravestone",
+	Phantom_assassin_ground_dagger = "npc_dota_phantom_assassin_ground_dagger",
+	Cny_beast = "npc_dota_cny_beast",
+	Error = "npc_dota_error",
+	Dark_willow_creature = "npc_dota_dark_willow_creature",
+	Seasonal_snowman = "npc_dota_seasonal_snowman",
+	Frostivus2018_snowman = "npc_dota_frostivus2018_snowman",
+	Seasonal_dragon = "npc_dota_seasonal_dragon",
+	Seasonal_cny_balloon = "npc_dota_seasonal_cny_balloon",
+	Seasonal_ti9_balloon = "npc_dota_seasonal_ti9_balloon",
+	Seasonal_ti9_drums = "npc_dota_seasonal_ti9_drums",
+	Seasonal_ti9_monkey = "npc_dota_seasonal_ti9_monkey",
+	Creature = "npc_dota_creature",
+	Seasonal_ti10_disco_ball = "npc_dota_seasonal_ti10_disco_ball",
+	Seasonal_ti10_soccer_ball = "npc_dota_seasonal_ti10_soccer_ball",
+	Unit_underlord_portal = "npc_dota_unit_underlord_portal",
+	Broodmother_sticky_web = "npc_dota_broodmother_sticky_web",
+}
+
+type HeroBaseProperties = UnitBaseProperties & {
+	/**
+	 * A standard name of the hero that would be overriden.
+	 */
+	override_hero?: string;
+
+	Model1?: `${string}.vmdl`;
+	Model2?: `${string}.vmdl`;
+	Model3?: `${string}.vmdl`;
+
+	Persona?: {
+		[index: number]: {
+			name: `npc_dota_hero_${string}`;
+			/**
+			 * For tools only.
+			 */
+			Model: `${string}.vmdl`;
+		};
+	};
+
+	AbilityTalentStart?: number;
+
+	// Ability Draft Stuff (mostly useless)
+	AbilityDraftDisabled?: boolean;
+	AbilityDraftIgnoreCount?: number;
+	AbilityDraftAbilities?: {
+		[abilityName: string]: string;
+	};
+	AbilityDraftUniqueAbilities?: {
+		[abilityName: string]: string;
+	};
+	// AbilityDraftAbilities?: {
+	// 	[abilityName: `Ability${number}`]: string;
+	// };
+	// AbilityDraftUniqueAbilities?: {
+	// 	[abilityName: `Ability${number}`]: string;
+	// };
+
+	Enabled?: boolean;
+	CMEnabled?: boolean;
+
+	/**
+	 * 1 - 255
+	 */
+	HeroID?: number;
+	HeroOrderID?: number;
+	SimilarHeroes?: string;
+
+	new_player_enable?: boolean;
+	NameAliases?: string;
+	workshop_guide_name?: string;
+	NewHero?: boolean;
+	ReleaseTimestamp?: number;
+	Legs?: number;
+	Team?: "Good" | "Bad";
+	Complexity?: number;
+
+	/**
+	 * Comma seperated roles.
+	 */
+	Role?: "";
+	/**
+	 * Either a number for all OR comma seperated numbers;
+	 */
+	RoleLevels?: number | string;
+
+	GibType?: "default" | "ethereal" | "goo" | "motor" | "ice" | "fire" | "electric" | "wood" | "stone";
+	GibTintColor?: [number, number, number, number];
+	LastHitChallengeRival?: `npc_${string}_hero_${string}`;
+	HeroGlowColor?: [number, number, number];
+	BotImplemented?: boolean;
+	BotForceSelection?: boolean;
+	Press?: boolean;
+	HeroPool1?: boolean;
+	HeroPool2?: boolean;
+	HeroUnlockOrder?: number;
+	CMTournamentIgnore?: boolean;
+	NoCombine?: boolean;
+	ARDMDisabled?: boolean;
+
+	AttackSpeedActivityModifiers?: Partial<{
+		[speed in AttackSpeedNames]: number;
+	}>;
+	MovementSpeedActivityModifiers?: Partial<{ [movement in MovementSpeedNames]: number }>;
+	AttackRangeActivityModifiers?: Partial<{ [range in AttackRangeNames]: number }>;
+
+	/**
+	 * Example:
+	 * ```Valve KeyValues File
+	 * "animation_transitions"
+	 *	{
+	 *		"ACT_DOTA_RUN"
+	 *		{
+	 *			"regular"		"0.300000"
+	 *		}
+	 *		"ACT_DOTA_IDLE"
+	 *		{
+	 *			"regular"		"0.55000"
+	 *		}
+	 *	}
+	 * ```
+	 */
+	animation_transitions?: {
+		[animation: string]: {
+			[modifier: string]: number;
+		};
+	};
+
+	RenderablePortrait?: {
+		Paricles?: {
+			[name: string]: "loadout";
+		};
+		// Paricles?: {
+		// 	[name: `${string}.vpcf`]: "loadout";
+		// };
+	};
+
+	AbilityPreview?: {
+		resource: `resource/${string}.res`;
+		movie: `media/heroes/${string}`;
+	};
+
+	ItemSlots?: ItemSlots;
+	Bot?: Bot;
+	HUD?: any;
+
+	PickSound?: string;
+	BanSound?: string;
+	HeroSelectSoundEffect?: string;
+	VoiceBackgroundSound?: string;
+};
+
+interface ItemSlots {
+	[index: number]: {
+		SlotIndex: number;
+		SlotName: string;
+		SlotText: `#LoadoutSlot_${string}`;
+		no_import?: boolean;
+		TextureWidth?: number;
+		TextureHeight?: number;
+		MaxPolygonsLOD0?: number;
+		MaxPolygonsLOD1?: number;
+		MaxBonesLOD0?: number;
+		MaxBonesLOD1?: number;
+		DisplayInLoadout?: boolean;
+		LoadoutPreviewMode?: "hero_model_override" | "hero" | "particle" | "transformation";
+		CanBeUsedAsGeneratingSlot?: boolean;
+		ShowItemOnGeneratedUnits?: boolean;
+		GeneratesUnits?: {
+			[index: number]: `npc_dota_${string}`;
+		};
+	};
+}
+
+interface Bot {
+	SupportsEasyMode?: boolean;
+	Loadout?: {
+		// [name: string]: BotItemType;
+		[name: `item_${string}`]: BotItemType;
+	};
+	/**
+	 * Abilities learned on levels.
+	 */
+	Build?: {
+		[index: number]: string;
+	};
+	HeroType?: BotHeroType;
+	AggressionFactor?: number;
+	LaningInfo?: {
+		SoloDesire?: number;
+		RequiresBabysit?: number;
+		ProvidesBabysit?: number;
+		SurvivalRating?: number;
+		RequiresFarm?: number;
+		ProvidesSetup?: number;
+		RequiresSetup?: number;
+	};
+}
+
+declare const enum BotItemType {
+	CONSUMABLE = "ITEM_CONSUMABLE",
+	CORE = "ITEM_CORE",
+	DERIVED = "ITEM_DERIVED",
+	EXTENSION = "ITEM_EXTENSION",
+	LUXURY = "ITEM_LUXURY",
+	SELLABLE = "ITEM_SELLABLE",
+}
+
+declare const enum BotHeroType {
+	GANKER = "DOTA_BOT_GANKER",
+	HARD_CARRY = "DOTA_BOT_HARD_CARRY",
+	NUKER = "DOTA_BOT_NUKER",
+	PURE_SUPPORT = "DOTA_BOT_PURE_SUPPORT",
+	PUSH_SUPPORT = "DOTA_BOT_PUSH_SUPPORT",
+	SEMI_CARRY = "DOTA_BOT_SEMI_CARRY",
+	STUN_SUPPORT = "DOTA_BOT_STUN_SUPPORT",
+	TANK = "DOTA_BOT_TANK",
+	SUPPORT = "DOTA_BOT_SUPPORT",
+}
+
+declare const enum AttackSpeedNames {
+	fast = "fast",
+	faster = "faster",
+	fastest = "fastest",
+	superfast = "superfast",
+	megafast = "megafast",
+}
+
+declare const enum MovementSpeedNames {
+	walk = "walk",
+	run = "run",
+	run_fast = "run_fast",
+	run_haste = "run_haste",
+	sprint = "sprint",
+	trot = "trot",
+	jog = "jog",
+	"<none>" = "<none>",
+}
+
+declare const enum AttackRangeNames {
+	attack_closest_range = "attack_closest_range",
+	attack_close_range = "attack_close_range",
+	attack_short_range = "attack_short_range",
+	attack_normal_range = "attack_normal_range",
+	attack_medium_range = "attack_medium_range",
+	attack_long_range = "attack_long_range",
 }

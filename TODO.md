@@ -1,9 +1,5 @@
 # Todo
 
-### Units
-
--   add list of possible `BaseClass` definitions
-
 ### Heroes
 
 -   create (similar to units)

@@ -30,27 +30,33 @@ const transform_1 = require("dota_transformer_pkg/transform");
 const GENERATED_FILE_NAME = {
     ["Ability" /* Ability */]: "/generatedAbilities.kv",
     ["Unit" /* Unit */]: "/generatedUnits.kv",
+    ["Hero" /* Hero */]: "/generatedHeroes.kv",
 };
 const GENERATED_FILE_PATH = {
     ["Ability" /* Ability */]: "generatedAbilities",
     ["Unit" /* Unit */]: "generatedUnits",
+    ["Hero" /* Hero */]: "generatedHeroes",
 };
 const BASE_NAME = {
     ["Ability" /* Ability */]: "DOTAAbilities",
     ["Unit" /* Unit */]: "DOTAUnits",
+    ["Hero" /* Hero */]: "DOTAHeroes",
 };
 const PATH_ADDITION = {
     ["Ability" /* Ability */]: "/abilities",
     ["Unit" /* Unit */]: "/units",
+    ["Hero" /* Hero */]: "/heroes",
 };
 const PATH_BASE_FILE = {
     ["Ability" /* Ability */]: "/../npc_abilities_custom.txt",
     ["Unit" /* Unit */]: "/../npc_units_custom.txt",
+    ["Hero" /* Hero */]: "/../npc_heroes_custom.txt",
 };
 const BASE_OBJECT = (type) => `"${BASE_NAME[type]}"\n{\n}`;
 const GENERATED_TYPES_PATH = {
     ["Ability" /* Ability */]: path.join(__dirname, "_generated", "abilities.d.ts"),
     ["Unit" /* Unit */]: path.join(__dirname, "_generated", "units.d.ts"),
+    ["Hero" /* Hero */]: path.join(__dirname, "_generated", "heroes.d.ts"),
 };
 const BASE_TYPE = {
     ["Ability" /* Ability */]: `
@@ -61,6 +67,10 @@ declare const enum CustomAbilities {
 interface CustomUnits {
 	$
 }`,
+    ["Hero" /* Hero */]: `
+interface CustomHeroes {
+	$
+}`,
 };
 const abilityMap = new Map();
 const curAbilities = new Map();
@@ -68,6 +78,9 @@ const curAbilityNames = new Set();
 const unitMap = new Map();
 const curUnits = new Map();
 const curUnitNames = new Set();
+const heroMap = new Map();
+const curHeroes = new Map();
+const curHeroNames = new Set();
 let curError = false;
 /**
  * Get the path to the directory inside "scripts/npc"
@@ -471,7 +484,7 @@ function writeUnit(unit) {
     for (const [index, name] of Object.entries(unit.abilities)) {
         abilities[`Ability${index}`] = name;
     }
-    const baseClass = (_a = unit.properties.BaseClass) !== null && _a !== void 0 ? _a : "npc_dota_creature";
+    const baseClass = (_a = unit.properties.BaseClass) !== null && _a !== void 0 ? _a : "npc_dota_creature" /* Creature */;
     const newProperties = unit.properties;
     delete newProperties.BaseClass;
     const kvUnit = Object.assign(Object.assign(Object.assign(Object.assign({ BaseClass: baseClass }, abilities), newProperties), unit.customProperties), { vscripts: `${unit.scriptFile}.lua` });
@@ -1087,12 +1100,14 @@ const createDotaTransformer = (program) => (context) => {
         // 	return file;
         // }
         // curError = false;
-        var _a, _b;
+        var _a, _b, _c;
         const fileName = getCleanedFilePath(file);
         let fileAbilities = (_a = abilityMap.get(fileName)) !== null && _a !== void 0 ? _a : new Set();
         curAbilities.set(fileName, new Set());
         let fileUnits = (_b = unitMap.get(fileName)) !== null && _b !== void 0 ? _b : new Set();
         curUnits.set(fileName, new Set());
+        let fileHeroes = (_c = heroMap.get(fileName)) !== null && _c !== void 0 ? _c : new Set();
+        curHeroes.set(fileName, new Set());
         const res = ts.visitNode(file, visit);
         const curFileAbilities = curAbilities.get(fileName);
         fileAbilities.forEach((abilityName) => {
@@ -1126,6 +1141,26 @@ const createDotaTransformer = (program) => (context) => {
                     remBase = count === 0;
                 }
                 removeUnit(fileName, unitName, remBase);
+            }
+        });
+        fileUnits = new Set();
+        curFileUnits.forEach((unit) => {
+            writeUnit(unit);
+            fileUnits.add(unit.name);
+        });
+        unitMap.set(fileName, fileUnits);
+        const curFileHeroes = curHeroes.get(fileName);
+        fileHeroes.forEach((heroName) => {
+            if (!hasNamedEntry(heroName, curFileHeroes)) {
+                let remBase = false;
+                if (transform_1.configuration.modularization !== "none" /* None */) {
+                    remBase = curFileHeroes.size === 0;
+                }
+                if (transform_1.configuration.modularization === "folder" /* Folder */ && remBase) {
+                    const count = getFileCountByFolder(fileName, unitMap);
+                    remBase = count === 0;
+                }
+                removeUnit(fileName, heroName, remBase);
             }
         });
         fileUnits = new Set();

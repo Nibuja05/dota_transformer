@@ -14,7 +14,9 @@
 		"tdev": "tsc --project ./dota_transformer/tsconfig.json --watch",
 		"tpdev": "tsc --project ./test_tlsp/tsconfig.json --watch",
 		"vdev": "tstl --project src/vscripts/tsconfig.json",
-		"ddev": "node node_modules/dota_transformer/checkDeclaration.js"
+		"ddev": "node node_modules/dota_transformer/checkDeclaration.js",
+		"sdev": "tsc --project scripts/generate/tsconfig.json --watch",
+		"generate": "node scripts/generate/extract_baseclasses.js"
 	},
 	"devDependencies": {
 		"@moddota/dota-lua-types": "^4.13.0",

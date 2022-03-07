@@ -92,4 +92,5 @@ declare const enum DecoratorType {
 declare const enum FileType {
 	Ability = "Ability",
 	Unit = "Unit",
+	Hero = "Hero",
 }

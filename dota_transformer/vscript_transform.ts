@@ -31,28 +31,34 @@ import {
 const GENERATED_FILE_NAME = {
 	[FileType.Ability]: "/generatedAbilities.kv",
 	[FileType.Unit]: "/generatedUnits.kv",
+	[FileType.Hero]: "/generatedHeroes.kv",
 };
 const GENERATED_FILE_PATH = {
 	[FileType.Ability]: "generatedAbilities",
 	[FileType.Unit]: "generatedUnits",
+	[FileType.Hero]: "generatedHeroes",
 };
 const BASE_NAME = {
 	[FileType.Ability]: "DOTAAbilities",
 	[FileType.Unit]: "DOTAUnits",
+	[FileType.Hero]: "DOTAHeroes",
 };
 const PATH_ADDITION = {
 	[FileType.Ability]: "/abilities",
 	[FileType.Unit]: "/units",
+	[FileType.Hero]: "/heroes",
 };
 const PATH_BASE_FILE = {
 	[FileType.Ability]: "/../npc_abilities_custom.txt",
 	[FileType.Unit]: "/../npc_units_custom.txt",
+	[FileType.Hero]: "/../npc_heroes_custom.txt",
 };
 const BASE_OBJECT = (type: FileType) => `"${BASE_NAME[type]}"\n{\n}`;
 
 const GENERATED_TYPES_PATH = {
 	[FileType.Ability]: path.join(__dirname, "_generated", "abilities.d.ts"),
 	[FileType.Unit]: path.join(__dirname, "_generated", "units.d.ts"),
+	[FileType.Hero]: path.join(__dirname, "_generated", "heroes.d.ts"),
 };
 
 const BASE_TYPE = {
@@ -64,6 +70,10 @@ declare const enum CustomAbilities {
 interface CustomUnits {
 	$
 }`,
+	[FileType.Hero]: `
+interface CustomHeroes {
+	$
+}`,
 };
 
 const abilityMap: Map<string, Set<string>> = new Map();
@@ -73,6 +83,10 @@ const curAbilityNames: Set<string> = new Set();
 const unitMap: Map<string, Set<string>> = new Map();
 const curUnits: Map<string, Set<UnitInformation>> = new Map();
 const curUnitNames: Set<string> = new Set();
+
+const heroMap: Map<string, Set<string>> = new Map();
+const curHeroes: Map<string, Set<UnitInformation>> = new Map();
+const curHeroNames: Set<string> = new Set();
 
 let curError = false;
 
@@ -499,7 +513,7 @@ function writeUnit(unit: UnitInformation) {
 		abilities[`Ability${index}`] = name;
 	}
 
-	const baseClass = unit.properties.BaseClass ?? "npc_dota_creature";
+	const baseClass = unit.properties.BaseClass ?? UnitBaseClasses.Creature;
 	const newProperties: { [name: string]: string | object } = unit.properties;
 	delete newProperties.BaseClass;
 	const kvUnit: KVObject = {
@@ -1114,6 +1128,8 @@ const createDotaTransformer =
 			curAbilities.set(fileName, new Set());
 			let fileUnits = unitMap.get(fileName) ?? new Set();
 			curUnits.set(fileName, new Set());
+			let fileHeroes = heroMap.get(fileName) ?? new Set();
+			curHeroes.set(fileName, new Set());
 
 			const res = ts.visitNode(file, visit);
 
@@ -1150,6 +1166,27 @@ const createDotaTransformer =
 						remBase = count === 0;
 					}
 					removeUnit(fileName, unitName, remBase);
+				}
+			});
+			fileUnits = new Set();
+			curFileUnits.forEach((unit) => {
+				writeUnit(unit);
+				fileUnits.add(unit.name);
+			});
+			unitMap.set(fileName, fileUnits);
+
+			const curFileHeroes = curHeroes.get(fileName)!;
+			fileHeroes.forEach((heroName) => {
+				if (!hasNamedEntry(heroName, curFileHeroes)) {
+					let remBase = false;
+					if (configuration.modularization !== ModularizationType.None) {
+						remBase = curFileHeroes.size === 0;
+					}
+					if (configuration.modularization === ModularizationType.Folder && remBase) {
+						const count = getFileCountByFolder(fileName, unitMap);
+						remBase = count === 0;
+					}
+					removeUnit(fileName, heroName, remBase);
 				}
 			});
 			fileUnits = new Set();

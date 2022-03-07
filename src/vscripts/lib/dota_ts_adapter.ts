@@ -64,6 +64,34 @@ export interface BaseUnit extends CDOTA_BaseNPC {
 }
 export class BaseUnit {}
 
+export interface BaseHero extends CDOTA_BaseNPC_Hero {
+	/**
+	 * Called when this unit spawns.
+	 */
+	OnSpawn(): void;
+	/**
+	 * Called when this unit dies.
+	 * @param attacker attacking unit
+	 * @param inflictor inflicting ability (if any)
+	 * @param damageBits
+	 */
+	OnDeath(attacker: CDOTA_BaseNPC | undefined, inflictor: CDOTABaseAbility | undefined, damageBits: number): void;
+	/**
+	 * When this unit gets damage
+	 * @param attacker attacking unit
+	 * @param inflictor  inflicting ability (if any)
+	 * @param damage damage
+	 * @param damageBits
+	 */
+	OnHurt(
+		attacker: CDOTA_BaseNPC | undefined,
+		inflictor: CDOTABaseAbility | undefined,
+		damage: number,
+		damageBits: number
+	): void;
+}
+export class BaseHero {}
+
 declare global {
 	function CreateUnitByName<K extends keyof CustomUnits, T extends CustomUnits[K]>(
 		this: void,
@@ -231,6 +259,10 @@ export const registerUnit = (name?: string) => (unit: new () => CDOTA_BaseNPC) =
 			unit.prototype["OnDestroy"]();
 		});
 	}
+};
+
+export const registerHero = (name?: string) => (unit: new () => CDOTA_BaseNPC_Hero) => {
+	TransformerAdapter.setUnit(unit.name, unit.prototype);
 };
 
 /**
