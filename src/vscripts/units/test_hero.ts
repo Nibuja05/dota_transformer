@@ -6,6 +6,14 @@ export class my_test_hero extends BaseHero {
 
 	BaseProperties: HeroBaseProperties = {
 		override_hero: "npc_dota_wisp",
+		ArmorPhysical: 1,
+		AttackCapabilities: UnitAttackCapability.RANGED_ATTACK,
+		AttackDamageMin: 30,
+		AttackDamageMax: 36,
+		AttackRate: 1.6,
+		AttackAnimationPoint: 0.4,
+		AttackAcquisitionRange: 800,
+		AttackRange: 500,
 	};
 	Abilities: UnitAbility[] = ["meepo_earthbind_ts_example", "", "", ""];
 

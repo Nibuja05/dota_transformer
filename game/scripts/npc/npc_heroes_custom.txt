@@ -1,0 +1,4 @@
+#base "heroes/generatedHeroes.kv"
+"DOTAHeroes"
+{
+}

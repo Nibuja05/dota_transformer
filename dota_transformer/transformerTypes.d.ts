@@ -12,6 +12,10 @@ type FinalUnitBaseProperties = {
 	[K in keyof UnitBaseProperties]: string | object;
 };
 
+type FinalHeroBaseProperties = {
+	[K in keyof HeroBaseProperties]: string | object;
+};
+
 type FinalUnitAbilities = {
 	[index: string]: string;
 };
@@ -47,6 +51,14 @@ interface UnitInformation {
 	name: string;
 	scriptFile: string;
 	properties: FinalUnitBaseProperties;
+	abilities: FinalUnitAbilities;
+	customProperties: AbilityCustomProperties;
+}
+
+interface HeroInformation {
+	name: string;
+	scriptFile: string;
+	properties: FinalHeroBaseProperties;
 	abilities: FinalUnitAbilities;
 	customProperties: AbilityCustomProperties;
 }

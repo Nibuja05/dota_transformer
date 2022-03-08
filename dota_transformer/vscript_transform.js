@@ -1,7 +1,11 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -87,7 +91,7 @@ let curError = false;
  * @returns dir path
  */
 function getBasePath(type) {
-    const vPath = transform_1.getTsConfig().output;
+    const vPath = (0, transform_1.getTsConfig)().output;
     const baseDir = path.resolve(vPath, "../npc");
     if (!fs.existsSync(baseDir))
         throw new transform_1.TransformerError("NPC script path not found");
@@ -102,7 +106,7 @@ function getBasePath(type) {
  * @returns current node file path (relative from "vscripts")
  */
 function getCleanedFilePath(node) {
-    const rootPath = transform_1.getTsConfig().rootDir;
+    const rootPath = (0, transform_1.getTsConfig)().rootDir;
     const absPath = ts.getOriginalNode(node).getSourceFile().fileName;
     const cleanedPath = absPath.substring(absPath.indexOf(rootPath) + rootPath.length + 1);
     return cleanedPath.replace(".ts", "");
@@ -115,10 +119,10 @@ function getAllGeneratedObjects(type) {
     const thisPath = getBasePath(type);
     const filePath = thisPath + GENERATED_FILE_NAME[type];
     if (!fs.existsSync(filePath)) {
-        transform_1.debugPrint("Failed to find " + GENERATED_FILE_NAME[type]);
+        (0, transform_1.debugPrint)("Failed to find " + GENERATED_FILE_NAME[type]);
         return;
     }
-    return valve_kv_1.deserializeFile(filePath);
+    return (0, valve_kv_1.deserializeFile)(filePath);
 }
 /**
  * Get all currently generated objects.
@@ -127,10 +131,10 @@ function getAllGeneratedObjects(type) {
 function getGeneratedObjects(type, absPath) {
     const filePath = getPathName(type, absPath);
     if (!fs.existsSync(filePath)) {
-        transform_1.debugPrint("Failed to find " + filePath);
+        (0, transform_1.debugPrint)("Failed to find " + filePath);
         return;
     }
-    return valve_kv_1.deserializeFile(filePath);
+    return (0, valve_kv_1.deserializeFile)(filePath);
 }
 /**
  * Writes the information of this object to a file, based on current configuration.
@@ -138,9 +142,9 @@ function getGeneratedObjects(type, absPath) {
  * @param obj object to write
  */
 function writeGeneratedObjects(type, absPath, obj) {
-    const content = valve_kv_1.serialize({ [BASE_NAME[type]]: obj });
+    const content = (0, valve_kv_1.serialize)({ [BASE_NAME[type]]: obj });
     const filePath = getPathName(type, absPath);
-    transform_1.debugPrint("Write to " + filePath);
+    (0, transform_1.debugPrint)("Write to " + filePath);
     fs.writeFileSync(filePath, content);
     addBase(type, absPath);
 }
@@ -150,9 +154,9 @@ function writeGeneratedObjects(type, absPath, obj) {
  * @param obj
  */
 function writeAllGeneratedObjects(type, obj) {
-    const content = valve_kv_1.serialize({ [BASE_NAME[type]]: obj });
+    const content = (0, valve_kv_1.serialize)({ [BASE_NAME[type]]: obj });
     const filePath = getBasePath(type) + GENERATED_FILE_NAME[type];
-    transform_1.debugPrint(`Write all objects [${type}]`);
+    (0, transform_1.debugPrint)(`Write all objects [${type}]`);
     fs.writeFileSync(filePath, content);
 }
 /**
@@ -199,13 +203,13 @@ function getPathName(type, absPath) {
  * @param absPath abs path of the ability
  */
 function addBase(type, absPath) {
-    transform_1.debugPrint("Check bases [Add]");
+    (0, transform_1.debugPrint)("Check bases [Add]");
     if (transform_1.configuration.modularization === "none" /* None */)
         return;
     const moduleName = getModuleName(absPath);
     const curBases = getBases(type);
     if (curBases.includes(moduleName)) {
-        transform_1.debugPrint("Base " + moduleName + " already included");
+        (0, transform_1.debugPrint)("Base " + moduleName + " already included");
         return;
     }
     writeBases(type, [...curBases, moduleName]);
@@ -216,13 +220,13 @@ function addBase(type, absPath) {
  * @param absPath abs path of the ability
  */
 function removeBase(type, absPath) {
-    transform_1.debugPrint("Check bases [Remove]");
+    (0, transform_1.debugPrint)("Check bases [Remove]");
     if (transform_1.configuration.modularization === "none" /* None */)
         return;
     const moduleName = getModuleName(absPath);
     const curBases = getBases(type);
     if (!curBases.includes(moduleName)) {
-        transform_1.debugPrint("Base " + moduleName + " not included");
+        (0, transform_1.debugPrint)("Base " + moduleName + " not included");
         return;
     }
     writeBases(type, curBases.filter((base) => base !== moduleName));
@@ -234,7 +238,7 @@ function removeBase(type, absPath) {
 function checkBase(type) {
     const basePath = getBasePath(type);
     const baseFilePath = basePath + PATH_BASE_FILE[type];
-    transform_1.debugPrint("Check if " + GENERATED_FILE_NAME[type] + " is already included as base");
+    (0, transform_1.debugPrint)("Check if " + GENERATED_FILE_NAME[type] + " is already included as base");
     if (!fs.existsSync(baseFilePath)) {
         fs.writeFileSync(baseFilePath, BASE_OBJECT(type));
     }
@@ -263,11 +267,14 @@ function getSourceFileName(type, obj) {
     if (type === "Ability" /* Ability */) {
         return obj["ScriptFile"];
     }
-    else {
+    else if (type === "Unit" /* Unit */) {
         const content = obj["vscripts"];
         if (!content)
             return;
         return content.replace(".lua", "");
+    }
+    else if (type === "Hero" /* Hero */) {
+        return obj["SourceFile"];
     }
 }
 let initialized = false;
@@ -279,22 +286,22 @@ function inititialize() {
     if (initialized === true)
         return;
     initialized = true;
-    transform_1.getConfiguration();
+    (0, transform_1.getConfiguration)();
     if (transform_1.configuration.disable === true)
         return;
     console.log("[Dota Transformer] Initialize...");
-    for (const type of ["Ability" /* Ability */, "Unit" /* Unit */]) {
+    for (const type of ["Ability" /* Ability */, "Unit" /* Unit */, "Hero" /* Hero */]) {
         checkBase(type);
         let origfileContent;
         try {
             origfileContent = getAllGeneratedObjects(type);
         }
         catch (_b) {
-            transform_1.debugPrint("Failed to read " + GENERATED_FILE_NAME[type]);
+            (0, transform_1.debugPrint)("Failed to read " + GENERATED_FILE_NAME[type]);
         }
         let fileContent = {};
         if (!origfileContent || Object.keys(origfileContent).length === 0) {
-            transform_1.debugPrint(GENERATED_FILE_NAME[type] + " is empty or not found");
+            (0, transform_1.debugPrint)(GENERATED_FILE_NAME[type] + " is empty or not found");
             const thisPath = `${getBasePath(type)}${GENERATED_FILE_NAME[type]}`;
             fs.writeFileSync(thisPath, BASE_OBJECT(type));
             if (transform_1.configuration.modularization !== "none" /* None */) {
@@ -319,19 +326,26 @@ function inititialize() {
                 abilitySet.add(key);
                 abilityMap.set(fileName, abilitySet);
             }
-            else {
+            else if (type === "Unit" /* Unit */) {
                 let unitSet = unitMap.get(fileName);
                 if (!unitSet)
                     unitSet = new Set();
                 unitSet.add(key);
                 unitMap.set(fileName, unitSet);
             }
+            else if (type === "Hero" /* Hero */) {
+                let heroSet = heroMap.get(fileName);
+                if (!heroSet)
+                    heroSet = new Set();
+                heroSet.add(key);
+                heroMap.set(fileName, heroSet);
+            }
         }
         const bases = getBases(type);
         // Adjust the bases to the current configuration
         switch (transform_1.configuration.modularization) {
             case "none" /* None */: {
-                transform_1.debugPrint("Switch to modularization: " + transform_1.configuration.modularization);
+                (0, transform_1.debugPrint)("Switch to modularization: " + transform_1.configuration.modularization);
                 if (bases.length > 0) {
                     writeAllGeneratedObjects(type, fileContent);
                 }
@@ -343,7 +357,7 @@ function inititialize() {
             }
             case "file" /* File */:
             case "folder" /* Folder */:
-                transform_1.debugPrint("Switch to modularization: " + transform_1.configuration.modularization);
+                (0, transform_1.debugPrint)("Switch to modularization: " + transform_1.configuration.modularization);
                 const basePath = `${getBasePath(type)}/${GENERATED_FILE_PATH[type]}`;
                 if (!fs.existsSync(basePath)) {
                     fs.mkdirSync(basePath);
@@ -362,11 +376,11 @@ function inititialize() {
                     curModules[key] = value;
                     moduleMap.set(moduleName, curModules);
                 }
-                transform_1.debugPrint(`Write new modularized ${type} files...`);
+                (0, transform_1.debugPrint)(`Write new modularized ${type} files...`);
                 const newBases = [];
                 moduleMap.forEach((value, key) => {
                     newBases.push(key);
-                    const content = valve_kv_1.serialize({ [BASE_NAME[type]]: value });
+                    const content = (0, valve_kv_1.serialize)({ [BASE_NAME[type]]: value });
                     const thisPath = basePath + `/${key}.kv`;
                     fs.writeFileSync(thisPath, content);
                 });
@@ -381,7 +395,7 @@ function inititialize() {
  * @returns
  */
 function getBases(type) {
-    transform_1.debugPrint("Get current bases");
+    (0, transform_1.debugPrint)("Get current bases");
     const finalFilePath = getBasePath(type) + GENERATED_FILE_PATH[type];
     if (!fs.existsSync(finalFilePath))
         return [];
@@ -405,7 +419,7 @@ function writeBases(type, bases) {
     }
     basesString += BASE_OBJECT(type);
     const filePath = `${getBasePath(type)}${GENERATED_FILE_NAME[type]}`;
-    transform_1.debugPrint("Refresh bases");
+    (0, transform_1.debugPrint)("Refresh bases");
     fs.writeFileSync(filePath, basesString);
 }
 /**
@@ -414,7 +428,7 @@ function writeBases(type, bases) {
  */
 function writeAbility(ability) {
     var _a;
-    transform_1.debugPrint("Prepare write of ability");
+    (0, transform_1.debugPrint)("Prepare write of ability");
     const formattedSpecials = {};
     for (let i = 0; i < ability.specials.length; i++) {
         const special = ability.specials[i];
@@ -454,7 +468,7 @@ function writeAbility(ability) {
  * @param remBase should the base be removed?
  */
 function removeAbility(absPath, abilityName, remBase) {
-    transform_1.debugPrint("Remove ability: " + abilityName);
+    (0, transform_1.debugPrint)("Remove ability: " + abilityName);
     const origfileContent = getGeneratedObjects("Ability" /* Ability */, absPath);
     const abilityFilePath = getPathName("Ability" /* Ability */, absPath);
     let fileContent = {};
@@ -468,7 +482,7 @@ function removeAbility(absPath, abilityName, remBase) {
         fs.unlinkSync(abilityFilePath);
         return;
     }
-    const abilityStr = valve_kv_1.serialize({ DOTAAbilities: fileContent });
+    const abilityStr = (0, valve_kv_1.serialize)({ DOTAAbilities: fileContent });
     fs.writeFileSync(abilityFilePath, abilityStr);
     curAbilityNames.delete(abilityName);
     updateTypes("Ability" /* Ability */);
@@ -479,7 +493,7 @@ function removeAbility(absPath, abilityName, remBase) {
  */
 function writeUnit(unit) {
     var _a;
-    transform_1.debugPrint("Prepare write of unit");
+    (0, transform_1.debugPrint)("Prepare write of unit");
     const abilities = {};
     for (const [index, name] of Object.entries(unit.abilities)) {
         abilities[`Ability${index}`] = name;
@@ -505,7 +519,7 @@ function writeUnit(unit) {
  * @param remBase should the base be removed?
  */
 function removeUnit(absPath, unitName, remBase) {
-    transform_1.debugPrint("Remove unit: " + unitName);
+    (0, transform_1.debugPrint)("Remove unit: " + unitName);
     const origfileContent = getGeneratedObjects("Unit" /* Unit */, absPath);
     const unitFilePath = getPathName("Unit" /* Unit */, absPath);
     let fileContent = {};
@@ -519,10 +533,61 @@ function removeUnit(absPath, unitName, remBase) {
         fs.unlinkSync(unitFilePath);
         return;
     }
-    const unitStr = valve_kv_1.serialize({ DOTAUnits: fileContent });
+    const unitStr = (0, valve_kv_1.serialize)({ DOTAUnits: fileContent });
     fs.writeFileSync(unitFilePath, unitStr);
-    curAbilityNames.delete(unitName);
-    updateTypes("Ability" /* Ability */);
+    curUnitNames.delete(unitName);
+    updateTypes("Unit" /* Unit */);
+}
+/**
+ * Create the hero text from the given information and update the hero kvs.
+ * @param hero hero Information
+ */
+function writeHero(hero) {
+    (0, transform_1.debugPrint)("Prepare write of hero");
+    const abilities = {};
+    for (const [index, name] of Object.entries(hero.abilities)) {
+        abilities[`Ability${index}`] = name;
+    }
+    const override_hero = hero.properties.override_hero;
+    const newProperties = hero.properties;
+    delete newProperties.override_hero;
+    delete newProperties.BaseClass;
+    const kvHero = Object.assign(Object.assign(Object.assign(Object.assign({ override_hero }, abilities), newProperties), hero.customProperties), { SourceFile: `${hero.scriptFile}` });
+    const origfileContent = getGeneratedObjects("Hero" /* Hero */, hero.scriptFile);
+    let fileContent = {};
+    if (origfileContent) {
+        fileContent = origfileContent.DOTAHeroes;
+    }
+    fileContent[hero.name] = kvHero;
+    writeGeneratedObjects("Hero" /* Hero */, hero.scriptFile, fileContent);
+    curHeroNames.add(hero.name);
+    updateTypes("Hero" /* Hero */);
+}
+/**
+ * Remove a hero from the KV ability file.
+ * @param absPath absolute path of the hero
+ * @param heroName name of the hero
+ * @param remBase should the base be removed?
+ */
+function removeHero(absPath, heroName, remBase) {
+    (0, transform_1.debugPrint)("Remove hero: " + heroName);
+    const origfileContent = getGeneratedObjects("Hero" /* Hero */, absPath);
+    const heroFilePath = getPathName("Hero" /* Hero */, absPath);
+    let fileContent = {};
+    if (origfileContent) {
+        fileContent = origfileContent.DOTAHeroes;
+    }
+    delete fileContent[heroName];
+    if (remBase)
+        removeBase("Hero" /* Hero */, absPath);
+    if (Object.keys(fileContent).length === 0 && transform_1.configuration.modularization !== "none" /* None */) {
+        fs.unlinkSync(heroFilePath);
+        return;
+    }
+    const heroStr = (0, valve_kv_1.serialize)({ DOTAHeroes: fileContent });
+    fs.writeFileSync(heroFilePath, heroStr);
+    curHeroNames.delete(heroName);
+    updateTypes("Hero" /* Hero */);
 }
 /**
  * Get the name and arguments of a decorator node.
@@ -656,7 +721,7 @@ function getSpecialValues(node) {
             ts.isPrefixUnaryExpression(property.initializer)) {
             const value = property.initializer.getText();
             specials.push({
-                type: transform_1.isInt(value) ? "FIELD_INTEGER" /* INTEGER */ : "FIELD_FLOAT" /* FLOAT */,
+                type: (0, transform_1.isInt)(value) ? "FIELD_INTEGER" /* INTEGER */ : "FIELD_FLOAT" /* FLOAT */,
                 name,
                 value,
             });
@@ -667,7 +732,7 @@ function getSpecialValues(node) {
             for (const elem of property.initializer.elements) {
                 if (ts.isNumericLiteral(elem) || ts.isStringLiteral(elem) || ts.isPrefixUnaryExpression(elem)) {
                     values.push(elem.getText());
-                    if (!transform_1.isInt(elem.getText()))
+                    if (!(0, transform_1.isInt)(elem.getText()))
                         type = "FIELD_FLOAT" /* FLOAT */;
                 }
             }
@@ -686,13 +751,13 @@ function getSpecialValues(node) {
                     value = [];
                     for (const elem of entries["value"]) {
                         value.push(elem);
-                        if (!transform_1.isInt(elem))
+                        if (!(0, transform_1.isInt)(elem))
                             type = "FIELD_FLOAT" /* FLOAT */;
                     }
                 }
                 else if (typeof entries["value"] === "string") {
                     value = entries["value"];
-                    if (!transform_1.isInt(entries["value"]))
+                    if (!(0, transform_1.isInt)(entries["value"]))
                         type = "FIELD_FLOAT" /* FLOAT */;
                 }
             }
@@ -724,13 +789,13 @@ function getAbilityBaseProperties(node) {
     for (const [name, val] of Object.entries(getObjectNodeEntries(initializer))) {
         let value;
         if (Array.isArray(val)) {
-            value = transform_1.isNumberArr(val) ? val.join(" ") : val.join(" | ");
+            value = (0, transform_1.isNumberArr)(val) ? val.join(" ") : val.join(" | ");
         }
         else if (typeof val === "string") {
             if (val in transformEnums_1.DifferentlyNamesEnums) {
                 value = transformEnums_1.DifferentlyNamesEnums[val];
             }
-            else if (transformEnums_1.NumericBaseProperties.includes(name) && !transform_1.isNumber(val)) {
+            else if (transformEnums_1.NumericBaseProperties.includes(name) && !(0, transform_1.isNumber)(val)) {
                 value = `%${val}`;
             }
             else {
@@ -759,10 +824,10 @@ function getUnitBaseProperties(node) {
     for (const [name, val] of Object.entries(getObjectNodeEntries(initializer))) {
         let value;
         if (Array.isArray(val)) {
-            value = transform_1.isNumberArr(val) ? val.join(" ") : val.join(" | ");
+            value = (0, transform_1.isNumberArr)(val) ? val.join(" ") : val.join(" | ");
         }
         else if (typeof val === "string") {
-            if (transformEnums_1.NumericBaseProperties.includes(name) && !transform_1.isNumber(val)) {
+            if (transformEnums_1.NumericBaseProperties.includes(name) && !(0, transform_1.isNumber)(val)) {
                 value = `%${val}`;
             }
             else {
@@ -921,7 +986,7 @@ function checkNode(node, program) {
                 });
             }
             else {
-                transform_1.debugPrint("Skipped ability creation for: " + name);
+                (0, transform_1.debugPrint)("Skipped ability creation for: " + name);
             }
         }
         else if (decoratorType === "registerUnit" /* Unit */) {
@@ -975,7 +1040,61 @@ function checkNode(node, program) {
                 });
             }
             else {
-                transform_1.debugPrint("Skipped unit creation for: " + name);
+                (0, transform_1.debugPrint)("Skipped unit creation for: " + name);
+            }
+        }
+        else if (decoratorType === "registerHero" /* Hero */) {
+            let abilities = {};
+            let props = {};
+            let customProps = {};
+            let skip = false;
+            const typeChecker = program.getTypeChecker();
+            const nodes = getClassHeritages(node, typeChecker);
+            for (const classNode of nodes) {
+                classNode.forEachChild((child) => {
+                    if (ts.isPropertyDeclaration(child)) {
+                        const name = getNodeName(child);
+                        if (name === transformEnums_1.ProtectedUnitProperties.Abilities) {
+                            abilities = Object.assign(Object.assign({}, abilities), getUnitAbilities(child));
+                        }
+                        if (name === transformEnums_1.ProtectedUnitProperties.BaseProperties) {
+                            props = Object.assign(Object.assign({}, props), getUnitBaseProperties(child));
+                        }
+                        if (name === transformEnums_1.ProtectedUnitProperties.SkipUnit) {
+                            if (getSkipValue(child)) {
+                                skip = true;
+                            }
+                        }
+                        if (name === transformEnums_1.ProtectedUnitProperties.CustomProperties) {
+                            customProps = Object.assign(Object.assign({}, customProps), getCustomProperties(child));
+                        }
+                    }
+                });
+            }
+            const filePath = getCleanedFilePath(node);
+            if (!skip) {
+                const heroList = curHeroes.get(filePath);
+                if (!heroList)
+                    return;
+                if (!props) {
+                    if (transform_1.configuration.strict === "warn" /* Warn */) {
+                        console.log("\x1b[93m%s\x1b[0m", `[Ability Transformer] No properties for '${name}'. Skipping.`);
+                    }
+                    if (transform_1.configuration.strict === "error" /* Error */) {
+                        throw new transform_1.TransformerError(`No properties for '${name}'. Aborting.`);
+                    }
+                    return;
+                }
+                heroList.add({
+                    name,
+                    scriptFile: filePath,
+                    properties: props,
+                    abilities: abilities,
+                    customProperties: customProps,
+                });
+            }
+            else {
+                (0, transform_1.debugPrint)("Skipped hero creation for: " + name);
             }
         }
     }
@@ -1038,8 +1157,15 @@ function updateTypes(type) {
         });
         content = BASE_TYPE[type].replace("$", entries.join(",\n\t") + ",");
     }
-    else {
+    else if (type === "Unit" /* Unit */) {
         curUnitNames.forEach((name) => {
+            entries.push(`${name}: ${name}`);
+        });
+        const ignore = "//@ts-ignore\n\t";
+        content = BASE_TYPE[type].replace("$", ignore + entries.join(`,\n\t${ignore}`) + ";");
+    }
+    else if (type === "Hero" /* Hero */) {
+        curHeroNames.forEach((name) => {
             entries.push(`${name}: ${name}`);
         });
         const ignore = "//@ts-ignore\n\t";
@@ -1071,10 +1197,10 @@ const removeNode = (node) => {
  * Creates the transformer.
  */
 const createDotaTransformer = (program) => (context) => {
-    const tsConfig = transform_1.setTsConfig(program);
+    const tsConfig = (0, transform_1.setTsConfig)(program);
     const preEmitDiagnostics = [...program.getOptionsDiagnostics(), ...program.getGlobalDiagnostics()];
     if (tsConfig) {
-        checkDeclarations_1.validateNettables(tsConfig.rootDir, tsConfig.output);
+        (0, checkDeclarations_1.validateNettables)(tsConfig.rootDir, tsConfig.output);
         // validateCustomGameevents(tsConfig.rootDir, tsConfig.output, program);
     }
     inititialize();
@@ -1157,18 +1283,18 @@ const createDotaTransformer = (program) => (context) => {
                     remBase = curFileHeroes.size === 0;
                 }
                 if (transform_1.configuration.modularization === "folder" /* Folder */ && remBase) {
-                    const count = getFileCountByFolder(fileName, unitMap);
+                    const count = getFileCountByFolder(fileName, heroMap);
                     remBase = count === 0;
                 }
-                removeUnit(fileName, heroName, remBase);
+                removeHero(fileName, heroName, remBase);
             }
         });
-        fileUnits = new Set();
-        curFileUnits.forEach((unit) => {
-            writeUnit(unit);
-            fileUnits.add(unit.name);
+        fileHeroes = new Set();
+        curFileHeroes.forEach((hero) => {
+            writeHero(hero);
+            fileHeroes.add(hero.name);
         });
-        unitMap.set(fileName, fileUnits);
+        heroMap.set(fileName, fileHeroes);
         return res;
     };
 };

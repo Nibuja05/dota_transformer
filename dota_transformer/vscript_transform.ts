@@ -85,7 +85,7 @@ const curUnits: Map<string, Set<UnitInformation>> = new Map();
 const curUnitNames: Set<string> = new Set();
 
 const heroMap: Map<string, Set<string>> = new Map();
-const curHeroes: Map<string, Set<UnitInformation>> = new Map();
+const curHeroes: Map<string, Set<HeroInformation>> = new Map();
 const curHeroNames: Set<string> = new Set();
 
 let curError = false;
@@ -278,10 +278,12 @@ function checkBase(type: FileType) {
 function getSourceFileName(type: FileType, obj: KVObject): string | undefined {
 	if (type === FileType.Ability) {
 		return obj["ScriptFile"] as string | undefined;
-	} else {
+	} else if (type === FileType.Unit) {
 		const content = obj["vscripts"] as string | undefined;
 		if (!content) return;
 		return content.replace(".lua", "");
+	} else if (type === FileType.Hero) {
+		return obj["SourceFile"] as string | undefined;
 	}
 }
 
@@ -298,7 +300,7 @@ function inititialize() {
 
 	console.log("[Dota Transformer] Initialize...");
 
-	for (const type of [FileType.Ability, FileType.Unit]) {
+	for (const type of [FileType.Ability, FileType.Unit, FileType.Hero]) {
 		checkBase(type);
 
 		let origfileContent: KVObject | undefined;
@@ -331,11 +333,16 @@ function inititialize() {
 				if (!abilitySet) abilitySet = new Set();
 				abilitySet.add(key);
 				abilityMap.set(fileName, abilitySet);
-			} else {
+			} else if (type === FileType.Unit) {
 				let unitSet = unitMap.get(fileName);
 				if (!unitSet) unitSet = new Set();
 				unitSet.add(key);
 				unitMap.set(fileName, unitSet);
+			} else if (type === FileType.Hero) {
+				let heroSet = heroMap.get(fileName);
+				if (!heroSet) heroSet = new Set();
+				heroSet.add(key);
+				heroMap.set(fileName, heroSet);
 			}
 		}
 		const bases = getBases(type);
@@ -558,8 +565,69 @@ function removeUnit(absPath: string, unitName: string, remBase: boolean) {
 	const unitStr = serialize({ DOTAUnits: fileContent });
 	fs.writeFileSync(unitFilePath, unitStr);
 
-	curAbilityNames.delete(unitName);
-	updateTypes(FileType.Ability);
+	curUnitNames.delete(unitName);
+	updateTypes(FileType.Unit);
+}
+
+/**
+ * Create the hero text from the given information and update the hero kvs.
+ * @param hero hero Information
+ */
+function writeHero(hero: HeroInformation) {
+	debugPrint("Prepare write of hero");
+	const abilities: { [name: string]: string } = {};
+	for (const [index, name] of Object.entries(hero.abilities)) {
+		abilities[`Ability${index}`] = name;
+	}
+
+	const override_hero = hero.properties.override_hero as string | undefined;
+	const newProperties: { [name: string]: string | object } = hero.properties;
+	delete newProperties.override_hero;
+	delete newProperties.BaseClass;
+	const kvHero: KVObject = {
+		override_hero,
+		...abilities,
+		...newProperties,
+		...hero.customProperties,
+		SourceFile: `${hero.scriptFile}`,
+	};
+	const origfileContent = getGeneratedObjects(FileType.Hero, hero.scriptFile);
+	let fileContent: KVObject = {};
+	if (origfileContent) {
+		fileContent = origfileContent.DOTAHeroes as KVObject;
+	}
+	fileContent[hero.name] = kvHero;
+	writeGeneratedObjects(FileType.Hero, hero.scriptFile, fileContent);
+
+	curHeroNames.add(hero.name);
+	updateTypes(FileType.Hero);
+}
+
+/**
+ * Remove a hero from the KV ability file.
+ * @param absPath absolute path of the hero
+ * @param heroName name of the hero
+ * @param remBase should the base be removed?
+ */
+function removeHero(absPath: string, heroName: string, remBase: boolean) {
+	debugPrint("Remove hero: " + heroName);
+	const origfileContent = getGeneratedObjects(FileType.Hero, absPath);
+	const heroFilePath = getPathName(FileType.Hero, absPath);
+	let fileContent: KVObject = {};
+	if (origfileContent) {
+		fileContent = origfileContent.DOTAHeroes as KVObject;
+	}
+	delete fileContent[heroName];
+	if (remBase) removeBase(FileType.Hero, absPath);
+	if (Object.keys(fileContent).length === 0 && configuration.modularization !== ModularizationType.None) {
+		fs.unlinkSync(heroFilePath);
+		return;
+	}
+	const heroStr = serialize({ DOTAHeroes: fileContent });
+	fs.writeFileSync(heroFilePath, heroStr);
+
+	curHeroNames.delete(heroName);
+	updateTypes(FileType.Hero);
 }
 
 /**
@@ -997,6 +1065,65 @@ function checkNode(node: ts.Node, program: ts.Program) {
 			} else {
 				debugPrint("Skipped unit creation for: " + name);
 			}
+		} else if (decoratorType === DecoratorType.Hero) {
+			let abilities: FinalUnitAbilities = {};
+			let props: FinalHeroBaseProperties = {};
+			let customProps: CustomProperties = {};
+			let skip = false;
+
+			const typeChecker = program.getTypeChecker();
+			const nodes = getClassHeritages(node, typeChecker);
+
+			for (const classNode of nodes) {
+				classNode.forEachChild((child) => {
+					if (ts.isPropertyDeclaration(child)) {
+						const name = getNodeName(child);
+						if (name === ProtectedUnitProperties.Abilities) {
+							abilities = { ...abilities, ...getUnitAbilities(child) };
+						}
+						if (name === ProtectedUnitProperties.BaseProperties) {
+							props = { ...props, ...getUnitBaseProperties(child) };
+						}
+						if (name === ProtectedUnitProperties.SkipUnit) {
+							if (getSkipValue(child)) {
+								skip = true;
+							}
+						}
+						if (name === ProtectedUnitProperties.CustomProperties) {
+							customProps = { ...customProps, ...getCustomProperties(child) };
+						}
+					}
+				});
+			}
+
+			const filePath = getCleanedFilePath(node);
+			if (!skip) {
+				const heroList = curHeroes.get(filePath);
+				if (!heroList) return;
+
+				if (!props) {
+					if (configuration.strict === StrictType.Warn) {
+						console.log(
+							"\x1b[93m%s\x1b[0m",
+							`[Ability Transformer] No properties for '${name}'. Skipping.`
+						);
+					}
+					if (configuration.strict === StrictType.Error) {
+						throw new TransformerError(`No properties for '${name}'. Aborting.`);
+					}
+					return;
+				}
+
+				heroList.add({
+					name,
+					scriptFile: filePath,
+					properties: props,
+					abilities: abilities,
+					customProperties: customProps,
+				});
+			} else {
+				debugPrint("Skipped hero creation for: " + name);
+			}
 		}
 	}
 }
@@ -1057,8 +1184,14 @@ function updateTypes(type: FileType) {
 			entries.push(`${name} = "${name}"`);
 		});
 		content = BASE_TYPE[type].replace("$", entries.join(",\n\t") + ",");
-	} else {
+	} else if (type === FileType.Unit) {
 		curUnitNames.forEach((name) => {
+			entries.push(`${name}: ${name}`);
+		});
+		const ignore = "//@ts-ignore\n\t";
+		content = BASE_TYPE[type].replace("$", ignore + entries.join(`,\n\t${ignore}`) + ";");
+	} else if (type === FileType.Hero) {
+		curHeroNames.forEach((name) => {
 			entries.push(`${name}: ${name}`);
 		});
 		const ignore = "//@ts-ignore\n\t";
@@ -1183,18 +1316,18 @@ const createDotaTransformer =
 						remBase = curFileHeroes.size === 0;
 					}
 					if (configuration.modularization === ModularizationType.Folder && remBase) {
-						const count = getFileCountByFolder(fileName, unitMap);
+						const count = getFileCountByFolder(fileName, heroMap);
 						remBase = count === 0;
 					}
-					removeUnit(fileName, heroName, remBase);
+					removeHero(fileName, heroName, remBase);
 				}
 			});
-			fileUnits = new Set();
-			curFileUnits.forEach((unit) => {
-				writeUnit(unit);
-				fileUnits.add(unit.name);
+			fileHeroes = new Set();
+			curFileHeroes.forEach((hero) => {
+				writeHero(hero);
+				fileHeroes.add(hero.name);
 			});
-			unitMap.set(fileName, fileUnits);
+			heroMap.set(fileName, fileHeroes);
 
 			return res;
 		};

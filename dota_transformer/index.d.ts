@@ -596,7 +596,7 @@ declare const enum UnitBaseClasses {
 	Broodmother_sticky_web = "npc_dota_broodmother_sticky_web",
 }
 
-type HeroBaseProperties = UnitBaseProperties & {
+type HeroBaseProperties = Omit<Omit<UnitBaseProperties, "BaseClass">, "ScriptFile"> & {
 	/**
 	 * A standard name of the hero that would be overriden.
 	 */
@@ -622,17 +622,11 @@ type HeroBaseProperties = UnitBaseProperties & {
 	AbilityDraftDisabled?: boolean;
 	AbilityDraftIgnoreCount?: number;
 	AbilityDraftAbilities?: {
-		[abilityName: string]: string;
+		[abilityName: `Ability${number}`]: string;
 	};
 	AbilityDraftUniqueAbilities?: {
-		[abilityName: string]: string;
+		[abilityName: `Ability${number}`]: string;
 	};
-	// AbilityDraftAbilities?: {
-	// 	[abilityName: `Ability${number}`]: string;
-	// };
-	// AbilityDraftUniqueAbilities?: {
-	// 	[abilityName: `Ability${number}`]: string;
-	// };
 
 	Enabled?: boolean;
 	CMEnabled?: boolean;
@@ -706,11 +700,8 @@ type HeroBaseProperties = UnitBaseProperties & {
 
 	RenderablePortrait?: {
 		Paricles?: {
-			[name: string]: "loadout";
+			[name: `${string}.vpcf`]: "loadout";
 		};
-		// Paricles?: {
-		// 	[name: `${string}.vpcf`]: "loadout";
-		// };
 	};
 
 	AbilityPreview?: {
@@ -753,7 +744,6 @@ interface ItemSlots {
 interface Bot {
 	SupportsEasyMode?: boolean;
 	Loadout?: {
-		// [name: string]: BotItemType;
 		[name: `item_${string}`]: BotItemType;
 	};
 	/**
